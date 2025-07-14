@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/loginFragment">
+
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.LoginFragment"
+        android:label="Login">
+        <action
+            android:id="@+id/action_loginFragment_to_homeFragment"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_loginFragment_to_registerFragment"
+            app:destination="@id/registerFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/registerFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.RegisterFragment"
+        android:label="Register">
+        <action
+            android:id="@+id/action_registerFragment_to_loginFragment"
+            app:destination="@id/loginFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.HomeFragment"
+        android:label="Home">
+        <action
+            android:id="@+id/action_homeFragment_to_productDetailFragment"
+            app:destination="@id/productDetailFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/categoryFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.CategoryFragment"
+        android:label="Categories">
+        <action
+            android:id="@+id/action_categoryFragment_to_productDetailFragment"
+            app:destination="@id/productDetailFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/searchFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.SearchFragment"
+        android:label="Search">
+        <action
+            android:id="@+id/action_searchFragment_to_productDetailFragment"
+            app:destination="@id/productDetailFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/productDetailFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.ProductDetailFragment"
+        android:label="Product Detail">
+        <action
+            android:id="@+id/action_productDetailFragment_to_cartFragment"
+            app:destination="@id/cartFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/cartFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.CartFragment"
+        android:label="Cart">
+        <action
+            android:id="@+id/action_cartFragment_to_checkoutFragment"
+            app:destination="@id/checkoutFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/checkoutFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.CheckoutFragment"
+        android:label="Checkout">
+        <action
+            android:id="@+id/action_checkoutFragment_to_orderConfirmationFragment"
+            app:destination="@id/orderConfirmationFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/orderConfirmationFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.OrderConfirmationFragment"
+        android:label="Order Confirmation" />
+    <fragment
+        android:id="@+id/accountFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.AccountFragment"
+        android:label="Account">
+        <action
+            android:id="@+id/action_accountFragment_to_loginFragment"
+            app:destination="@id/loginFragment"
+            app:popUpTo="@id/nav_graph"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_accountFragment_to_orderTrackingFragment"
+            app:destination="@id/orderTrackingFragment" />
+        <action
+            android:id="@+id/action_accountFragment_to_wishlistFragment"
+            app:destination="@id/wishlistFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/orderTrackingFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.OrderTrackingFragment"
+        android:label="Order Tracking" />
+    <fragment
+        android:id="@+id/promotionFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.PromotionFragment"
+        android:label="Promotions" />
+    <fragment
+        android:id="@+id/wishlistFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.WishlistFragment"
+        android:label="Wishlist" />
+    <fragment
+        android:id="@+id/luckyBoxFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.LuckyBoxFragment"
+        android:label="Lucky Box" />
+</navigation>
