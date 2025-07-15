@@ -6,6 +6,12 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import fpt.edu.vn.stickershop.models.Product;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "StickerShop.db";
@@ -144,36 +150,36 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         // Insert sample products
         ContentValues product1 = new ContentValues();
         product1.put(COLUMN_PRODUCT_NAME, "Cute Cat Sticker");
-        product1.put(COLUMN_PRODUCT_PRICE, 1.99);
-        product1.put(COLUMN_PRODUCT_IMAGE, "https://example.com/cat_sticker.png");
+        product1.put(COLUMN_PRODUCT_PRICE, 2.99);
+        product1.put(COLUMN_PRODUCT_IMAGE, "https://mystickermania.com/cdn/stickers/cute-cats/cute-cat-want-play-512x512.png");
         product1.put(COLUMN_PRODUCT_TYPE, "sticker");
         long product1Id = db.insert(TABLE_PRODUCTS, null, product1);
 
         ContentValues product2 = new ContentValues();
         product2.put(COLUMN_PRODUCT_NAME, "Funny Dog Sticker");
         product2.put(COLUMN_PRODUCT_PRICE, 2.49);
-        product2.put(COLUMN_PRODUCT_IMAGE, "https://example.com/dog_sticker.png");
+        product2.put(COLUMN_PRODUCT_IMAGE, "https://i.pinimg.com/474x/b1/22/90/b12290f6533dacdadfcecfa5d955cd07.jpg");
         product2.put(COLUMN_PRODUCT_TYPE, "sticker");
         long product2Id = db.insert(TABLE_PRODUCTS, null, product2);
 
         ContentValues product3 = new ContentValues();
         product3.put(COLUMN_PRODUCT_NAME, "Anime Character Sticker");
         product3.put(COLUMN_PRODUCT_PRICE, 3.99);
-        product3.put(COLUMN_PRODUCT_IMAGE, "https://example.com/anime_sticker.png");
+        product3.put(COLUMN_PRODUCT_IMAGE, "https://i.pinimg.com/736x/1d/d8/bc/1dd8bca12fd95c54877b4c8e7fcb2ffa.jpg");
         product3.put(COLUMN_PRODUCT_TYPE, "sticker");
         long product3Id = db.insert(TABLE_PRODUCTS, null, product3);
 
         ContentValues product4 = new ContentValues();
         product4.put(COLUMN_PRODUCT_NAME, "Rainbow Unicorn Sticker");
         product4.put(COLUMN_PRODUCT_PRICE, 2.99);
-        product4.put(COLUMN_PRODUCT_IMAGE, "https://example.com/unicorn_sticker.png");
+        product4.put(COLUMN_PRODUCT_IMAGE, "https://i.etsystatic.com/33278253/r/il/19a507/5652069310/il_fullxfull.5652069310_c9y9.jpg");
         product4.put(COLUMN_PRODUCT_TYPE, "sticker");
         long product4Id = db.insert(TABLE_PRODUCTS, null, product4);
 
         ContentValues product5 = new ContentValues();
         product5.put(COLUMN_PRODUCT_NAME, "Kawaii Food Sticker");
         product5.put(COLUMN_PRODUCT_PRICE, 1.49);
-        product5.put(COLUMN_PRODUCT_IMAGE, "https://example.com/food_sticker.png");
+        product5.put(COLUMN_PRODUCT_IMAGE, "https://img.freepik.com/free-vector/hand-drawn-funny-sticker-set_23-2148382132.jpg?semt=ais_hybrid&w=740");
         product5.put(COLUMN_PRODUCT_TYPE, "sticker");
         long product5Id = db.insert(TABLE_PRODUCTS, null, product5);
 
@@ -248,5 +254,74 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_NAME, name);
         long result = db.insert(TABLE_USERS, null, values);
         return result != -1;
+    }
+
+    public List<Product> getAllProducts() {
+        List<Product> productList = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        Cursor cursor = db.query(TABLE_PRODUCTS,
+                null, null, null, null, null, null);
+
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                int id = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_PRODUCT_ID));
+                String name = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PRODUCT_NAME));
+                double price = cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_PRODUCT_PRICE));
+                String imageUrl = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PRODUCT_IMAGE));
+                String type = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PRODUCT_TYPE));
+
+                productList.add(new Product(id, name, price, imageUrl, type));
+            } while (cursor.moveToNext());
+
+            cursor.close();
+        }
+
+        db.close();
+        return productList;
+    }
+
+    public void addToCart(int userId, int productId, int quantity) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        
+        try {
+            // Check if product already exists in cart
+            Cursor cursor = db.query(TABLE_CART,
+                    new String[]{COLUMN_QUANTITY},
+                    COLUMN_USER_ID_FK + " = ? AND " + COLUMN_PRODUCT_ID_FK + " = ?",
+                    new String[]{String.valueOf(userId), String.valueOf(productId)},
+                    null, null, null);
+
+            ContentValues values = new ContentValues();
+            values.put(COLUMN_USER_ID_FK, userId);
+            values.put(COLUMN_PRODUCT_ID_FK, productId);
+            
+            if (cursor.moveToFirst()) {
+                // Update quantity if product exists
+                int currentQuantity = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_QUANTITY));
+                values.put(COLUMN_QUANTITY, currentQuantity + quantity);
+                db.update(TABLE_CART, values,
+                        COLUMN_USER_ID_FK + " = ? AND " + COLUMN_PRODUCT_ID_FK + " = ?",
+                        new String[]{String.valueOf(userId), String.valueOf(productId)});
+            } else {
+                // Insert new cart item if product doesn't exist
+                values.put(COLUMN_QUANTITY, quantity);
+                db.insert(TABLE_CART, null, values);
+            }
+            cursor.close();
+        } catch (Exception e) {
+            Log.e("DatabaseHelper", "Error adding to cart", e);
+        }
+    }
+
+    public void clearCart(int userId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        try {
+            db.delete(TABLE_CART, 
+                     COLUMN_USER_ID_FK + " = ?",
+                     new String[]{String.valueOf(userId)});
+        } catch (Exception e) {
+            Log.e("DatabaseHelper", "Error clearing cart", e);
+        }
     }
 }
