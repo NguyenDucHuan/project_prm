@@ -6,6 +6,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -278,5 +279,49 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         db.close();
         return productList;
+    }
+
+    public void addToCart(int userId, int productId, int quantity) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        
+        try {
+            // Check if product already exists in cart
+            Cursor cursor = db.query(TABLE_CART,
+                    new String[]{COLUMN_QUANTITY},
+                    COLUMN_USER_ID_FK + " = ? AND " + COLUMN_PRODUCT_ID_FK + " = ?",
+                    new String[]{String.valueOf(userId), String.valueOf(productId)},
+                    null, null, null);
+
+            ContentValues values = new ContentValues();
+            values.put(COLUMN_USER_ID_FK, userId);
+            values.put(COLUMN_PRODUCT_ID_FK, productId);
+            
+            if (cursor.moveToFirst()) {
+                // Update quantity if product exists
+                int currentQuantity = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_QUANTITY));
+                values.put(COLUMN_QUANTITY, currentQuantity + quantity);
+                db.update(TABLE_CART, values,
+                        COLUMN_USER_ID_FK + " = ? AND " + COLUMN_PRODUCT_ID_FK + " = ?",
+                        new String[]{String.valueOf(userId), String.valueOf(productId)});
+            } else {
+                // Insert new cart item if product doesn't exist
+                values.put(COLUMN_QUANTITY, quantity);
+                db.insert(TABLE_CART, null, values);
+            }
+            cursor.close();
+        } catch (Exception e) {
+            Log.e("DatabaseHelper", "Error adding to cart", e);
+        }
+    }
+
+    public void clearCart(int userId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        try {
+            db.delete(TABLE_CART, 
+                     COLUMN_USER_ID_FK + " = ?",
+                     new String[]{String.valueOf(userId)});
+        } catch (Exception e) {
+            Log.e("DatabaseHelper", "Error clearing cart", e);
+        }
     }
 }
