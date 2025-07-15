@@ -13,7 +13,7 @@ import com.squareup.picasso.Picasso;
 import java.util.List;
 
 public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductViewHolder> {
-    private List<Product> products;
+    private List<Product> products = null;
 
     public ProductAdapter(List<Product> products) {
         this.products = products;

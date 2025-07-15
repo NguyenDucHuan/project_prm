@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.navigation.NavController;
@@ -39,7 +40,6 @@ public class MainActivity extends AppCompatActivity {
         Log.d("MainActivity", "Database created successfully");
 
         // Insert initial data
-        insertInitialData(db); // Thêm dòng này để gọi phương thức
         db.close(); // Đóng database sau khi sử dụng
 
         // Setup navigation
@@ -49,29 +49,18 @@ public class MainActivity extends AppCompatActivity {
             NavController navController = navHostFragment.getNavController();
             BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
             NavigationUI.setupWithNavController(bottomNav, navController);
+
+            // Ẩn/hiện bottomNav tùy theo fragment
+            navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
+                if (destination.getId() == R.id.loginFragment ||
+                        destination.getId() == R.id.registerFragment) {
+                    bottomNav.setVisibility(View.GONE);
+                } else {
+                    bottomNav.setVisibility(View.VISIBLE);
+                }
+            });
         } else {
             Log.e("MainActivity", "NavHostFragment is null");
-        }
-    }
-
-    private void insertInitialData(SQLiteDatabase db) {
-        try {
-            db.beginTransaction();
-
-            ContentValues values = new ContentValues();
-            values.put(DatabaseHelper.COLUMN_PRODUCT_NAME, "Test Product");
-            values.put(DatabaseHelper.COLUMN_PRODUCT_PRICE, 9.99);
-            values.put(DatabaseHelper.COLUMN_PRODUCT_IMAGE, "image_url");
-            values.put(DatabaseHelper.COLUMN_PRODUCT_TYPE, "sticker");
-
-            long result = db.insert(DatabaseHelper.TABLE_PRODUCTS, null, values);
-            Log.d("MainActivity", "Inserted initial product with result: " + result);
-
-            db.setTransactionSuccessful();
-        } catch (Exception e) {
-            Log.e("MainActivity", "Error inserting initial data", e);
-        } finally {
-            db.endTransaction();
         }
     }
 

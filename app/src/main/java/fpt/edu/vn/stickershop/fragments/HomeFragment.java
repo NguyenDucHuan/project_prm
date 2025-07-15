@@ -8,6 +8,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -26,7 +27,7 @@ public class HomeFragment extends Fragment {
     private DatabaseHelper dbHelper;
     private TextView emptyTextView;
 
-//    @Override
+    //    @Override
 //    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 //        View view = inflater.inflate(R.layout.fragment_home, container, false);
 //        Log.d("HomeFragment", "onCreateView started");
@@ -80,7 +81,8 @@ public class HomeFragment extends Fragment {
 
         return view;
     }
-//    private List<Product> getProducts() {
+
+    //    private List<Product> getProducts() {
 //        List<Product> products = new ArrayList<>();
 //        try {
 //            SQLiteDatabase db = dbHelper.getReadableDatabase();
@@ -102,46 +104,49 @@ public class HomeFragment extends Fragment {
 //        }
 //        return products;
 //    }
-private List<Product> getProducts() {
-    List<Product> products = new ArrayList<>();
-    SQLiteDatabase db = null;
-    Cursor cursor = null;
+    private List<Product> getProducts() {
+        List<Product> products = new ArrayList<>();
+        SQLiteDatabase db = null;
+        Cursor cursor = null;
 
-    try {
-        db = dbHelper.getReadableDatabase();
-        Log.d("HomeFragment", "Database opened successfully");
+        try {
+            db = dbHelper.getReadableDatabase();
+            Log.d("HomeFragment", "Database opened successfully");
 
-        // Kiểm tra số lượng records trong bảng
-        Cursor countCursor = db.rawQuery("SELECT COUNT(*) FROM " + DatabaseHelper.TABLE_PRODUCTS, null);
-        countCursor.moveToFirst();
-        int count = countCursor.getInt(0);
-        countCursor.close();
-        Log.d("HomeFragment", "Total products in database: " + count);
+            // Kiểm tra số lượng records trong bảng
+            Cursor countCursor = db.rawQuery("SELECT COUNT(*) FROM " + DatabaseHelper.TABLE_PRODUCTS, null);
+            countCursor.moveToFirst();
+            int count = countCursor.getInt(0);
+            countCursor.close();
+            Log.d("HomeFragment", "Total products in database: " + count);
 
-        cursor = db.query(DatabaseHelper.TABLE_PRODUCTS, null, null, null, null, null, null);
-        Log.d("HomeFragment", "Query executed, found " + cursor.getCount() + " products");
+            cursor = db.query(DatabaseHelper.TABLE_PRODUCTS, null, null, null, null, null, null);
+            Log.d("HomeFragment", "Query executed, found " + cursor.getCount() + " products");
 
-        while (cursor.moveToNext()) {
-            String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PRODUCT_NAME));
-            double price = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PRODUCT_PRICE));
-            String image = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PRODUCT_IMAGE));
-            String type = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PRODUCT_TYPE));
+            while (cursor.moveToNext()) {
+                int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PRODUCT_ID));
+                String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PRODUCT_NAME));
+                double price = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PRODUCT_PRICE));
+                String image = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PRODUCT_IMAGE));
+                String type = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PRODUCT_TYPE));
 
-            Product product = new Product(cursor.getPosition(), name, price, image, type);
-            products.add(product);
-            Log.d("HomeFragment", "Loaded product: " + name);
+                Product product = new Product(id, name, price, image, type);
+                products.add(product);
+                Log.d("HomeFragment", "Loaded product: " + name);
+            }
+
+        } catch (Exception e) {
+            Log.e("HomeFragment", "Error loading products", e);
+            e.printStackTrace();
+        } finally {
+            if (cursor != null) cursor.close();
+            if (db != null) db.close();
         }
-    } catch (Exception e) {
-        Log.e("HomeFragment", "Error loading products", e);
-        e.printStackTrace();
-    } finally {
-        if (cursor != null) cursor.close();
-        if (db != null) db.close();
+
+        Log.d("HomeFragment", "Returning " + products.size() + " products");
+        return products;
     }
 
-    Log.d("HomeFragment", "Returning " + products.size() + " products");
-    return products;
-}
     private void updateUI(List<Product> products) {
         if (products.isEmpty()) {
             Log.d("HomeFragment", "No products found, showing empty state");
