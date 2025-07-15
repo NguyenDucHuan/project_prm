@@ -89,28 +89,17 @@
         <action
             android:id="@+id/action_accountFragment_to_orderTrackingFragment"
             app:destination="@id/orderTrackingFragment" />
-        <action
-            android:id="@+id/action_accountFragment_to_wishlistFragment"
-            app:destination="@id/wishlistFragment" />
     </fragment>
     <fragment
         android:id="@+id/orderTrackingFragment"
         android:name="fpt.edu.vn.stickershop.fragments.OrderTrackingFragment"
         android:label="Order Tracking" />
     <fragment
-        android:id="@+id/promotionFragment"
-        android:name="fpt.edu.vn.stickershop.fragments.PromotionFragment"
-        android:label="Promotions" />
-    <fragment
-        android:id="@+id/wishlistFragment"
-        android:name="fpt.edu.vn.stickershop.fragments.WishlistFragment"
-        android:label="Wishlist" />
-    <fragment
         android:id="@+id/luckyBoxFragment"
         android:name="fpt.edu.vn.stickershop.fragments.LuckyBoxFragment"
         android:label="Lucky Box" />
 
-        
+
     <fragment
         android:id="@+id/cartFragment"
         android:name="fpt.edu.vn.stickershop.fragments.CartFragment"
@@ -129,5 +118,29 @@
             app:destination="@id/homeFragment"
             app:popUpTo="@id/homeFragment"
             app:popUpToInclusive="true" />
+    </fragment>
+    <!-- Add this action inside homeFragment -->
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.HomeFragment"
+        android:label="Home">
+
+        <action
+            android:id="@+id/action_homeFragment_to_productDetailFragment"
+            app:destination="@id/productDetailFragment" />
+
+    </fragment>
+
+    <!-- Make sure ProductDetailFragment is defined -->
+    <fragment
+        android:id="@+id/productDetailFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.ProductDetailFragment"
+        android:label="Product Detail">
+
+        <argument
+            android:name="product_id"
+            app:argType="integer"
+            android:defaultValue="-1" />
+
     </fragment>
 </navigation>

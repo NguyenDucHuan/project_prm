@@ -11,6 +11,10 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.List;
 
+import fpt.edu.vn.stickershop.R;
+import fpt.edu.vn.stickershop.models.CartItem;
+import fpt.edu.vn.stickershop.models.OrderDetails;
+import fpt.edu.vn.stickershop.models.OrderItem;
 import fpt.edu.vn.stickershop.models.Product;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
@@ -38,11 +42,23 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_PRODUCT_IMAGE = "image_url";
     public static final String COLUMN_PRODUCT_TYPE = "type";
 
+
     // Cart table columns
     public static final String COLUMN_CART_ID = "cart_id";
     public static final String COLUMN_USER_ID_FK = "user_id";
     public static final String COLUMN_PRODUCT_ID_FK = "product_id";
     public static final String COLUMN_QUANTITY = "quantity";
+    public static final String COLUMN_ORDER_TIMESTAMP = "order_timestamp";
+    public static final String COLUMN_ORDER_ITEM_COUNT = "item_count";
+
+    // Order Items table
+    public static final String TABLE_ORDER_ITEMS = "order_items";
+    public static final String COLUMN_ORDER_ITEM_ID = "order_item_id";
+    public static final String COLUMN_ORDER_ID_FK = "order_id_fk";
+    public static final String COLUMN_ORDER_ITEM_PRODUCT_ID = "product_id";
+    public static final String COLUMN_ORDER_ITEM_QUANTITY = "quantity";
+    public static final String COLUMN_ORDER_ITEM_PRICE = "unit_price";
+    public static final String COLUMN_ORDER_ITEM_TOTAL = "total_price";
 
     // Orders table columns
     public static final String COLUMN_ORDER_ID = "order_id";
@@ -89,14 +105,31 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 "FOREIGN KEY(" + COLUMN_PRODUCT_ID_FK + ") REFERENCES " + TABLE_PRODUCTS + "(" + COLUMN_PRODUCT_ID + "))";
         db.execSQL(createCartTable);
 
+        // Cập nhật bảng orders với các cột mới
         String createOrdersTable = "CREATE TABLE " + TABLE_ORDERS + " (" +
                 COLUMN_ORDER_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 COLUMN_USER_ID_FK + " INTEGER, " +
                 COLUMN_ORDER_STATUS + " TEXT, " +
                 COLUMN_ORDER_TOTAL + " REAL, " +
                 COLUMN_ORDER_ADDRESS + " TEXT, " +
-                "FOREIGN KEY(" + COLUMN_USER_ID_FK + ") REFERENCES " + TABLE_USERS + "(" + COLUMN_USER_ID + "))";
+                COLUMN_ORDER_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP, " +
+                COLUMN_ORDER_ITEM_COUNT + " INTEGER, " +
+                "FOREIGN KEY(" + COLUMN_USER_ID_FK + ") REFERENCES " + TABLE_USERS + "(" + COLUMN_USER_ID + ")" +
+                ")";
         db.execSQL(createOrdersTable);
+
+        // Tạo bảng order_items
+        String createOrderItemsTable = "CREATE TABLE " + TABLE_ORDER_ITEMS + " (" +
+                COLUMN_ORDER_ITEM_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                COLUMN_ORDER_ID_FK + " INTEGER, " +
+                COLUMN_ORDER_ITEM_PRODUCT_ID + " INTEGER, " +
+                COLUMN_ORDER_ITEM_QUANTITY + " INTEGER, " +
+                COLUMN_ORDER_ITEM_PRICE + " REAL, " +
+                COLUMN_ORDER_ITEM_TOTAL + " REAL, " +
+                "FOREIGN KEY(" + COLUMN_ORDER_ID_FK + ") REFERENCES " + TABLE_ORDERS + "(" + COLUMN_ORDER_ID + "), " +
+                "FOREIGN KEY(" + COLUMN_ORDER_ITEM_PRODUCT_ID + ") REFERENCES " + TABLE_PRODUCTS + "(" + COLUMN_PRODUCT_ID + ")" +
+                ")";
+        db.execSQL(createOrderItemsTable);
 
         String createLuckyBoxTable = "CREATE TABLE " + TABLE_LUCKY_BOX + " (" +
                 COLUMN_LUCKY_BOX_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -118,12 +151,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_PRODUCTS);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_CART);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_ORDERS);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_LUCKY_BOX);
+        // Drop all tables and recreate
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_ORDER_ITEMS);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_WISHLIST);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_LUCKY_BOX);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_ORDERS);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_CART);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_PRODUCTS);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
         onCreate(db);
     }
 
@@ -313,7 +348,62 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             Log.e("DatabaseHelper", "Error adding to cart", e);
         }
     }
+    public List<CartItem> getCartItems(int userId) {
+        List<CartItem> cartItems = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
 
+        String query = "SELECT c." + COLUMN_CART_ID + ", " +
+                "c." + COLUMN_QUANTITY + ", " +
+                "p." + COLUMN_PRODUCT_ID + ", " +
+                "p." + COLUMN_PRODUCT_NAME + ", " +
+                "p." + COLUMN_PRODUCT_PRICE + ", " +
+                "p." + COLUMN_PRODUCT_IMAGE + ", " +
+                "p." + COLUMN_PRODUCT_TYPE +
+                " FROM " + TABLE_CART + " c " +
+                "INNER JOIN " + TABLE_PRODUCTS + " p ON c." + COLUMN_PRODUCT_ID_FK +
+                " = p." + COLUMN_PRODUCT_ID +
+                " WHERE c." + COLUMN_USER_ID_FK + " = ?";
+
+        Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(userId)});
+
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                int cartId = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_CART_ID));
+                int quantity = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_QUANTITY));
+                int productId = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_PRODUCT_ID));
+                String name = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PRODUCT_NAME));
+                double price = cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_PRODUCT_PRICE));
+                String imageUrl = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PRODUCT_IMAGE));
+                String type = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PRODUCT_TYPE));
+
+                cartItems.add(new CartItem(cartId, productId, name, price, imageUrl, type, quantity));
+            } while (cursor.moveToNext());
+
+            cursor.close();
+        }
+
+        db.close();
+        return cartItems;
+    }
+
+    public void updateCartQuantity(int productId, int newQuantity) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_QUANTITY, newQuantity);
+
+        db.update(TABLE_CART, values,
+                COLUMN_PRODUCT_ID_FK + " = ?",
+                new String[]{String.valueOf(productId)});
+        db.close();
+    }
+
+    public void removeFromCart(int productId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.delete(TABLE_CART,
+                COLUMN_PRODUCT_ID_FK + " = ?",
+                new String[]{String.valueOf(productId)});
+        db.close();
+    }
     public void clearCart(int userId) {
         SQLiteDatabase db = this.getWritableDatabase();
         try {
@@ -323,5 +413,139 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         } catch (Exception e) {
             Log.e("DatabaseHelper", "Error clearing cart", e);
         }
+    }
+    public long saveOrderWithItems(int userId, String address, List<CartItem> cartItems) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        long orderId = -1;
+
+        try {
+            db.beginTransaction();
+
+            // Calculate totals
+            double totalAmount = 0;
+            int totalItems = 0;
+            for (CartItem item : cartItems) {
+                totalAmount += item.getTotalPrice();
+                totalItems += item.getQuantity();
+            }
+
+            // Insert order
+            ContentValues orderValues = new ContentValues();
+            orderValues.put(COLUMN_USER_ID_FK, userId);
+            orderValues.put(COLUMN_ORDER_STATUS, "Pending");
+            orderValues.put(COLUMN_ORDER_TOTAL, totalAmount);
+            orderValues.put(COLUMN_ORDER_ADDRESS, address);
+            orderValues.put(COLUMN_ORDER_ITEM_COUNT, totalItems);
+
+            orderId = db.insert(TABLE_ORDERS, null, orderValues);
+
+            if (orderId != -1) {
+                // Insert order items
+                for (CartItem item : cartItems) {
+                    ContentValues itemValues = new ContentValues();
+                    itemValues.put(COLUMN_ORDER_ID_FK, orderId);
+                    itemValues.put(COLUMN_ORDER_ITEM_PRODUCT_ID, item.getProductId());
+                    itemValues.put(COLUMN_ORDER_ITEM_QUANTITY, item.getQuantity());
+                    itemValues.put(COLUMN_ORDER_ITEM_PRICE, item.getProductPrice());
+                    itemValues.put(COLUMN_ORDER_ITEM_TOTAL, item.getTotalPrice());
+
+                    db.insert(TABLE_ORDER_ITEMS, null, itemValues);
+                }
+
+                db.setTransactionSuccessful();
+            }
+
+        } catch (Exception e) {
+            Log.e("DatabaseHelper", "Error saving order with items", e);
+        } finally {
+            db.endTransaction();
+            db.close();
+        }
+
+        return orderId;
+    }
+
+    public OrderDetails getOrderDetails(long orderId) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        OrderDetails orderDetails = null;
+
+        try {
+            // Get order info
+            String orderQuery = "SELECT * FROM " + TABLE_ORDERS + " WHERE " + COLUMN_ORDER_ID + " = ?";
+            Cursor orderCursor = db.rawQuery(orderQuery, new String[]{String.valueOf(orderId)});
+
+            if (orderCursor.moveToFirst()) {
+                String status = orderCursor.getString(orderCursor.getColumnIndexOrThrow(COLUMN_ORDER_STATUS));
+                double total = orderCursor.getDouble(orderCursor.getColumnIndexOrThrow(COLUMN_ORDER_TOTAL));
+                String address = orderCursor.getString(orderCursor.getColumnIndexOrThrow(COLUMN_ORDER_ADDRESS));
+
+                String timestamp = "N/A";
+                int itemCount = 0;
+                try {
+                    timestamp = orderCursor.getString(orderCursor.getColumnIndexOrThrow(COLUMN_ORDER_TIMESTAMP));
+                } catch (Exception e) {
+                    // Column doesn't exist, use default
+                }
+                try {
+                    itemCount = orderCursor.getInt(orderCursor.getColumnIndexOrThrow(COLUMN_ORDER_ITEM_COUNT));
+                } catch (Exception e) {
+                    // Column doesn't exist, use default
+                }
+
+                // Mock order items với hình ảnh
+                List<OrderItem> orderItems = getMockOrderItems(orderId);
+
+                orderDetails = new OrderDetails((int)orderId, status, total, address, timestamp, itemCount, orderItems);
+            }
+
+            orderCursor.close();
+
+        } catch (Exception e) {
+            android.util.Log.e("DatabaseHelper", "Error getting order details", e);
+        } finally {
+            db.close();
+        }
+
+        return orderDetails;
+    }
+
+    private List<OrderItem> getMockOrderItems(long orderId) {
+        List<OrderItem> items = new ArrayList<>();
+
+        // Mock data với hình ảnh từ drawable resources
+        String[] productNames = {
+                "Cute Cat Sticker Pack",
+                "Funny Dog Stickers",
+                "Emoji Set Premium",
+                "Nature Collection",
+                "Space Adventure Pack"
+        };
+
+        String[] productImages = {
+                String.valueOf(R.drawable.ic_product_placeholder), // Bạn có thể thay bằng hình thật
+                "https://example.com/dog_stickers.jpg",
+                String.valueOf(R.drawable.ic_product_placeholder),
+                "https://example.com/nature_stickers.jpg",
+                String.valueOf(R.drawable.ic_product_placeholder)
+        };
+
+        double[] unitPrices = {2.99, 1.99, 4.99, 3.49, 5.99};
+        int[] quantities = {2, 1, 1, 3, 1};
+
+        // Tạo 2-4 items cho mỗi order
+        int itemCount = (int) (Math.random() * 3) + 2; // 2-4 items
+
+        for (int i = 0; i < itemCount && i < productNames.length; i++) {
+            int productId = (int) (orderId * 10 + i + 1);
+            String productName = productNames[i];
+            String productImage = productImages[i];
+            int quantity = quantities[i];
+            double unitPrice = unitPrices[i];
+            double totalPrice = unitPrice * quantity;
+
+            items.add(new OrderItem(productId, productName, productImage, quantity, unitPrice, totalPrice));
+        }
+
+        return items;
     }
 }

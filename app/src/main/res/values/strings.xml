@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">StickerShop</string>
+    <string name="todo">TODO</string>
+    <string name="thank_you_for_your_purchase">Thank you for your purchase!</string>
+    <string name="we_will_process_your_order_soon_you_can_track_your_order_status_in_the_orders_section">We will process your order soon. You can track your order status in the Orders section.</string>
+    <string name="shipping_address">Shipping Address</string>
+    <string name="checkout">Checkout</string>
+    <string name="continue_shopping">Continue Shopping</string>
 </resources>

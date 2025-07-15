@@ -8,4 +8,14 @@
     <color name="colorOnSecondary">#000000</color>
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
+    <color name="primary_color">#FF6200EE</color>
+    <color name="primary_color_dark">#FF3700B3</color>
+    <color name="accent_color">#FF03DAC5</color>
+
+    <!-- Status colors -->
+    <color name="status_pending">#FF9800</color>
+    <color name="status_processing">#2196F3</color>
+    <color name="status_delivered">#4CAF50</color>
+    <color name="status_cancelled">#F44336</color>
+    <color name="status_default">#757575</color>
 </resources>

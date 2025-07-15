@@ -2,6 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp">
@@ -10,12 +11,13 @@
         android:id="@+id/checkout_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Checkout"
+        android:layout_marginTop="48dp"
+        android:gravity="center"
+        android:text="@string/checkout"
         android:textSize="24sp"
         android:textStyle="bold"
-        android:gravity="center"
-        android:layout_marginTop="16dp"
-        app:layout_constraintTop_toTopOf="parent"/>
+        app:layout_constraintTop_toTopOf="parent"
+        tools:layout_editor_absoluteX="16dp" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/address_layout"
@@ -23,12 +25,15 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         app:layout_constraintTop_toBottomOf="@id/checkout_title">
+
         <EditText
             android:id="@+id/address_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Shipping Address"
-            android:inputType="textPostalAddress" />
+            android:autofillHints=""
+            android:hint="@string/shipping_address"
+            android:inputType="textPostalAddress"
+            android:textColorHint="#616161" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <Button
@@ -59,6 +64,7 @@
             <ImageView
                 android:layout_width="64dp"
                 android:layout_height="64dp"
+                android:contentDescription="@string/todo"
                 android:src="@drawable/ic_check_circle"
                 android:layout_gravity="center"
                 android:layout_marginBottom="16dp"/>
@@ -66,7 +72,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Thank you for your purchase!"
+                android:text="@string/thank_you_for_your_purchase"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:gravity="center"
@@ -84,14 +90,23 @@
                 android:id="@+id/shipping_address_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Shipping Address:"
-                android:textSize="16sp"
+                android:text="@string/shipping_address"
+                android:textSize="14sp"
                 android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:id="@+id/order_summary_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Order Summary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp"/>
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="We will process your order soon. You can track your order status in the Orders section."
+                android:text="@string/we_will_process_your_order_soon_you_can_track_your_order_status_in_the_orders_section"
                 android:textSize="14sp"
                 android:gravity="center"/>
 
@@ -99,7 +114,7 @@
                 android:id="@+id/continue_shopping_button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Continue Shopping"
+                android:text="@string/continue_shopping"
                 android:layout_marginTop="16dp"/>
         </LinearLayout>
     </androidx.cardview.widget.CardView>

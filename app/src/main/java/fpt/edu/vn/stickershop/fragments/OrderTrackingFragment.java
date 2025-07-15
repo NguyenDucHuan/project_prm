@@ -1,5 +1,7 @@
 package fpt.edu.vn.stickershop.fragments;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
@@ -30,7 +32,8 @@ public class OrderTrackingFragment extends Fragment {
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         dbHelper = new DatabaseHelper(getContext());
 
-        orderAdapter = new OrderAdapter(getOrders());
+        // Truyền dbHelper vào adapter thay vì callback
+        orderAdapter = new OrderAdapter(getOrders(), dbHelper);
         recyclerView.setAdapter(orderAdapter);
 
         return view;
@@ -38,16 +41,40 @@ public class OrderTrackingFragment extends Fragment {
 
     private List<Order> getOrders() {
         List<Order> orders = new ArrayList<>();
+
+        SharedPreferences prefs = requireContext().getSharedPreferences("StickerShopPrefs", Context.MODE_PRIVATE);
+        int userId = prefs.getInt("user_id", -1);
+
+        if (userId == -1) return orders;
+
         SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor cursor = db.query(DatabaseHelper.TABLE_ORDERS, null, null, null, null, null, null);
+
+        String query = "SELECT " +
+                DatabaseHelper.COLUMN_ORDER_ID + ", " +
+                DatabaseHelper.COLUMN_ORDER_STATUS + ", " +
+                DatabaseHelper.COLUMN_ORDER_TOTAL + ", " +
+                DatabaseHelper.COLUMN_ORDER_ADDRESS + ", " +
+                "COALESCE(" + DatabaseHelper.COLUMN_ORDER_TIMESTAMP + ", 'N/A') as timestamp, " +
+                "COALESCE(" + DatabaseHelper.COLUMN_ORDER_ITEM_COUNT + ", 0) as item_count " +
+                "FROM " + DatabaseHelper.TABLE_ORDERS +
+                " WHERE " + DatabaseHelper.COLUMN_USER_ID_FK + " = ? " +
+                "ORDER BY " + DatabaseHelper.COLUMN_ORDER_ID + " DESC";
+
+        Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(userId)});
+
         while (cursor.moveToNext()) {
             int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ORDER_ID));
             String status = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ORDER_STATUS));
             double total = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ORDER_TOTAL));
             String address = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ORDER_ADDRESS));
-            orders.add(new Order(id, status, total, address));
+            String timestamp = cursor.getString(cursor.getColumnIndexOrThrow("timestamp"));
+            int itemCount = cursor.getInt(cursor.getColumnIndexOrThrow("item_count"));
+
+            orders.add(new Order(id, status, total, address, timestamp, itemCount));
         }
         cursor.close();
+        db.close();
+
         return orders;
     }
 }
