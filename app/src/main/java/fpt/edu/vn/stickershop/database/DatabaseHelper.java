@@ -13,9 +13,12 @@ import java.util.List;
 
 import fpt.edu.vn.stickershop.R;
 import fpt.edu.vn.stickershop.models.CartItem;
+import fpt.edu.vn.stickershop.models.InventoryItem;
+import fpt.edu.vn.stickershop.models.LuckyWheel;
 import fpt.edu.vn.stickershop.models.OrderDetails;
 import fpt.edu.vn.stickershop.models.OrderItem;
 import fpt.edu.vn.stickershop.models.Product;
+import fpt.edu.vn.stickershop.models.WheelItem;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "StickerShop.db";
@@ -26,8 +29,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String TABLE_PRODUCTS = "products";
     public static final String TABLE_CART = "cart";
     public static final String TABLE_ORDERS = "orders";
-    public static final String TABLE_LUCKY_BOX = "lucky_box";
-    public static final String TABLE_WISHLIST = "wishlist";
+    public static final String TABLE_ORDER_ITEMS = "order_items";
+    public static final String TABLE_LUCKY_WHEELS = "lucky_wheels";
+    public static final String TABLE_WHEEL_ITEMS = "wheel_items";
+    public static final String TABLE_USER_INVENTORY = "user_inventory";
 
     // Users table columns
     public static final String COLUMN_USER_ID = "user_id";
@@ -52,7 +57,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_ORDER_ITEM_COUNT = "item_count";
 
     // Order Items table
-    public static final String TABLE_ORDER_ITEMS = "order_items";
     public static final String COLUMN_ORDER_ITEM_ID = "order_item_id";
     public static final String COLUMN_ORDER_ID_FK = "order_id_fk";
     public static final String COLUMN_ORDER_ITEM_PRODUCT_ID = "product_id";
@@ -60,20 +64,29 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_ORDER_ITEM_PRICE = "unit_price";
     public static final String COLUMN_ORDER_ITEM_TOTAL = "total_price";
 
+    // Lucky Wheel tables
+    public static final String COLUMN_WHEEL_ID = "wheel_id";
+    public static final String COLUMN_WHEEL_NAME = "wheel_name";
+    public static final String COLUMN_WHEEL_COST = "wheel_cost";
+    public static final String COLUMN_WHEEL_DESCRIPTION = "wheel_description";
+
+    public static final String COLUMN_WHEEL_ITEM_ID = "wheel_item_id";
+    public static final String COLUMN_WHEEL_ID_FK = "wheel_id_fk";
+    public static final String COLUMN_ITEM_PRODUCT_ID = "product_id";
+    public static final String COLUMN_ITEM_PROBABILITY = "probability";
+    public static final String COLUMN_ITEM_QUANTITY = "quantity";
+
+    public static final String COLUMN_INVENTORY_ID = "inventory_id";
+    public static final String COLUMN_INVENTORY_USER_ID = "user_id";
+    public static final String COLUMN_INVENTORY_PRODUCT_ID = "product_id";
+    public static final String COLUMN_INVENTORY_QUANTITY = "quantity";
+    public static final String COLUMN_INVENTORY_DATE_OBTAINED = "date_obtained";
+
     // Orders table columns
     public static final String COLUMN_ORDER_ID = "order_id";
     public static final String COLUMN_ORDER_STATUS = "status";
     public static final String COLUMN_ORDER_TOTAL = "total";
     public static final String COLUMN_ORDER_ADDRESS = "address";
-
-    // Lucky Box table columns
-    public static final String COLUMN_LUCKY_BOX_ID = "lucky_box_id";
-    public static final String COLUMN_LUCKY_BOX_NAME = "box_name";
-    public static final String COLUMN_LUCKY_BOX_PRICE = "price";
-    public static final String COLUMN_LUCKY_BOX_ITEMS = "items";
-
-    // Wishlist table columns
-    public static final String COLUMN_WISHLIST_ID = "wishlist_id";
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -130,31 +143,47 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 "FOREIGN KEY(" + COLUMN_ORDER_ITEM_PRODUCT_ID + ") REFERENCES " + TABLE_PRODUCTS + "(" + COLUMN_PRODUCT_ID + ")" +
                 ")";
         db.execSQL(createOrderItemsTable);
+        // Tạo bảng lucky_wheels
+        String createWheelsTable = "CREATE TABLE " + TABLE_LUCKY_WHEELS + " (" +
+                COLUMN_WHEEL_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                COLUMN_WHEEL_NAME + " TEXT NOT NULL, " +
+                COLUMN_WHEEL_COST + " REAL NOT NULL, " +
+                COLUMN_WHEEL_DESCRIPTION + " TEXT" +
+                ")";
+        db.execSQL(createWheelsTable);
+        // Tạo bảng wheel_items
+        String createWheelItemsTable = "CREATE TABLE " + TABLE_WHEEL_ITEMS + " (" +
+                COLUMN_WHEEL_ITEM_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                COLUMN_WHEEL_ID_FK + " INTEGER, " +
+                COLUMN_ITEM_PRODUCT_ID + " INTEGER, " +
+                COLUMN_ITEM_PROBABILITY + " REAL, " +
+                COLUMN_ITEM_QUANTITY + " INTEGER, " +
+                "FOREIGN KEY(" + COLUMN_WHEEL_ID_FK + ") REFERENCES " + TABLE_LUCKY_WHEELS + "(" + COLUMN_WHEEL_ID + "), " +
+                "FOREIGN KEY(" + COLUMN_ITEM_PRODUCT_ID + ") REFERENCES " + TABLE_PRODUCTS + "(" + COLUMN_PRODUCT_ID + ")" +
+                ")";
+        db.execSQL(createWheelItemsTable);
+        // Tạo bảng user_inventory
+        String createInventoryTable = "CREATE TABLE " + TABLE_USER_INVENTORY + " (" +
+                COLUMN_INVENTORY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                COLUMN_INVENTORY_USER_ID + " INTEGER, " +
+                COLUMN_INVENTORY_PRODUCT_ID + " INTEGER, " +
+                COLUMN_INVENTORY_QUANTITY + " INTEGER, " +
+                COLUMN_INVENTORY_DATE_OBTAINED + " DATETIME DEFAULT CURRENT_TIMESTAMP, " +
+                "FOREIGN KEY(" + COLUMN_INVENTORY_USER_ID + ") REFERENCES " + TABLE_USERS + "(" + COLUMN_USER_ID + "), " +
+                "FOREIGN KEY(" + COLUMN_INVENTORY_PRODUCT_ID + ") REFERENCES " + TABLE_PRODUCTS + "(" + COLUMN_PRODUCT_ID + ")" +
+                ")";
+        db.execSQL(createInventoryTable);
 
-        String createLuckyBoxTable = "CREATE TABLE " + TABLE_LUCKY_BOX + " (" +
-                COLUMN_LUCKY_BOX_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                COLUMN_LUCKY_BOX_NAME + " TEXT, " +
-                COLUMN_LUCKY_BOX_PRICE + " REAL, " +
-                COLUMN_LUCKY_BOX_ITEMS + " TEXT)";
-        db.execSQL(createLuckyBoxTable);
-
-        String createWishlistTable = "CREATE TABLE " + TABLE_WISHLIST + " (" +
-                COLUMN_WISHLIST_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                COLUMN_USER_ID_FK + " INTEGER, " +
-                COLUMN_PRODUCT_ID_FK + " INTEGER, " +
-                "FOREIGN KEY(" + COLUMN_USER_ID_FK + ") REFERENCES " + TABLE_USERS + "(" + COLUMN_USER_ID + "), " +
-                "FOREIGN KEY(" + COLUMN_PRODUCT_ID_FK + ") REFERENCES " + TABLE_PRODUCTS + "(" + COLUMN_PRODUCT_ID + "))";
-        db.execSQL(createWishlistTable);
-
+        insertSampleLuckyWheelData(db);
         insertSampleData(db);
+
+
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         // Drop all tables and recreate
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_ORDER_ITEMS);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_WISHLIST);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_LUCKY_BOX);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_ORDERS);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_CART);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_PRODUCTS);
@@ -246,29 +275,31 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         order2.put(COLUMN_ORDER_ADDRESS, "456 Sample Road, Town");
         db.insert(TABLE_ORDERS, null, order2);
 
-        // Insert sample lucky box
-        ContentValues luckyBox1 = new ContentValues();
-        luckyBox1.put(COLUMN_LUCKY_BOX_NAME, "Mystery Sticker Box");
-        luckyBox1.put(COLUMN_LUCKY_BOX_PRICE, 9.99);
-        luckyBox1.put(COLUMN_LUCKY_BOX_ITEMS, "[\"Cute Cat Sticker\",\"Funny Dog Sticker\",\"Rare Unicorn Sticker\"]");
-        db.insert(TABLE_LUCKY_BOX, null, luckyBox1);
+    }
 
-        ContentValues luckyBox2 = new ContentValues();
-        luckyBox2.put(COLUMN_LUCKY_BOX_NAME, "Anime Surprise Box");
-        luckyBox2.put(COLUMN_LUCKY_BOX_PRICE, 12.99);
-        luckyBox2.put(COLUMN_LUCKY_BOX_ITEMS, "[\"Anime Character Sticker\",\"Kawaii Food Sticker\"]");
-        db.insert(TABLE_LUCKY_BOX, null, luckyBox2);
+    private void insertSampleLuckyWheelData(SQLiteDatabase db) {
+        // Insert sample lucky wheel
+        ContentValues wheelValues = new ContentValues();
+        wheelValues.put(COLUMN_WHEEL_NAME, "Mystery Sticker Wheel");
+        wheelValues.put(COLUMN_WHEEL_COST, 5.0);
+        wheelValues.put(COLUMN_WHEEL_DESCRIPTION, "Spin to win amazing stickers!");
+        long wheelId = db.insert(TABLE_LUCKY_WHEELS, null, wheelValues);
 
-        // Insert sample wishlist items (user 2)
-        ContentValues wishlist1 = new ContentValues();
-        wishlist1.put(COLUMN_USER_ID_FK, 2);
-        wishlist1.put(COLUMN_PRODUCT_ID_FK, product4Id);
-        db.insert(TABLE_WISHLIST, null, wishlist1);
+        // Insert wheel items with different probabilities
+        insertWheelItem(db, wheelId, 1, 40.0, 1); // Common item - 40%
+        insertWheelItem(db, wheelId, 2, 30.0, 1); // Common item - 30%
+        insertWheelItem(db, wheelId, 3, 20.0, 1); // Uncommon item - 20%
+        insertWheelItem(db, wheelId, 4, 8.0, 1);  // Rare item - 8%
+        insertWheelItem(db, wheelId, 5, 2.0, 1);  // Super rare item - 2%
+    }
 
-        ContentValues wishlist2 = new ContentValues();
-        wishlist2.put(COLUMN_USER_ID_FK, 2);
-        wishlist2.put(COLUMN_PRODUCT_ID_FK, product5Id);
-        db.insert(TABLE_WISHLIST, null, wishlist2);
+    private void insertWheelItem(SQLiteDatabase db, long wheelId, int productId, double probability, int quantity) {
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_WHEEL_ID_FK, wheelId);
+        values.put(COLUMN_ITEM_PRODUCT_ID, productId);
+        values.put(COLUMN_ITEM_PROBABILITY, probability);
+        values.put(COLUMN_ITEM_QUANTITY, quantity);
+        db.insert(TABLE_WHEEL_ITEMS, null, values);
     }
 
     public boolean checkUser(String email, String password) {
@@ -547,5 +578,115 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
 
         return items;
+    }
+
+    public List<LuckyWheel> getAllLuckyWheels() {
+        List<LuckyWheel> wheels = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        Cursor cursor = db.query(TABLE_LUCKY_WHEELS, null, null, null, null, null, null);
+
+        while (cursor.moveToNext()) {
+            int id = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_WHEEL_ID));
+            String name = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_WHEEL_NAME));
+            double cost = cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_WHEEL_COST));
+            String description = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_WHEEL_DESCRIPTION));
+
+            List<WheelItem> items = getWheelItems(id);
+            wheels.add(new LuckyWheel(id, name, cost, description, items));
+        }
+
+        cursor.close();
+        db.close();
+        return wheels;
+    }
+    public List<InventoryItem> getUserInventory(int userId) {
+        List<InventoryItem> inventoryItems = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        String query = "SELECT i.*, p." + COLUMN_PRODUCT_NAME + ", p." + COLUMN_PRODUCT_IMAGE +
+                " FROM " + TABLE_USER_INVENTORY + " i " +
+                "JOIN " + TABLE_PRODUCTS + " p ON i." + COLUMN_INVENTORY_PRODUCT_ID + " = p." + COLUMN_PRODUCT_ID +
+                " WHERE i." + COLUMN_INVENTORY_USER_ID + " = ?";
+
+        Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(userId)});
+
+        while (cursor.moveToNext()) {
+            int id = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_INVENTORY_ID));
+            int productId = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_INVENTORY_PRODUCT_ID));
+            int quantity = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_INVENTORY_QUANTITY));
+            String dateObtained = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_INVENTORY_DATE_OBTAINED));
+            String productName = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PRODUCT_NAME));
+            String productImage = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PRODUCT_IMAGE));
+
+            inventoryItems.add(new InventoryItem(id, userId, productId, productName, productImage, quantity, dateObtained));
+        }
+
+        cursor.close();
+        db.close();
+        return inventoryItems;
+    }
+    public List<WheelItem> getWheelItems(int wheelId) {
+        List<WheelItem> items = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        String query = "SELECT wi.*, p." + COLUMN_PRODUCT_NAME + ", p." + COLUMN_PRODUCT_IMAGE +
+                " FROM " + TABLE_WHEEL_ITEMS + " wi " +
+                "JOIN " + TABLE_PRODUCTS + " p ON wi." + COLUMN_ITEM_PRODUCT_ID + " = p." + COLUMN_PRODUCT_ID +
+                " WHERE wi." + COLUMN_WHEEL_ID_FK + " = ?";
+
+        Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(wheelId)});
+
+        while (cursor.moveToNext()) {
+            int itemId = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_WHEEL_ITEM_ID));
+            int productId = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ITEM_PRODUCT_ID));
+            double probability = cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_ITEM_PROBABILITY));
+            int quantity = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ITEM_QUANTITY));
+            String productName = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PRODUCT_NAME));
+            String productImage = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PRODUCT_IMAGE));
+
+            items.add(new WheelItem(itemId, wheelId, productId, productName, productImage, probability, quantity));
+        }
+
+        cursor.close();
+        db.close();
+        return items;
+    }
+
+    public boolean addToInventory(int userId, int productId, int quantity) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        // Check if item already exists in inventory
+        Cursor cursor = db.query(TABLE_USER_INVENTORY,
+                new String[]{COLUMN_INVENTORY_QUANTITY},
+                COLUMN_INVENTORY_USER_ID + "=? AND " + COLUMN_INVENTORY_PRODUCT_ID + "=?",
+                new String[]{String.valueOf(userId), String.valueOf(productId)},
+                null, null, null);
+
+        ContentValues values = new ContentValues();
+        boolean success;
+
+        if (cursor.moveToFirst()) {
+            // Update existing item
+            int currentQuantity = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_INVENTORY_QUANTITY));
+            values.put(COLUMN_INVENTORY_QUANTITY, currentQuantity + quantity);
+
+            int rowsUpdated = db.update(TABLE_USER_INVENTORY, values,
+                    COLUMN_INVENTORY_USER_ID + "=? AND " + COLUMN_INVENTORY_PRODUCT_ID + "=?",
+                    new String[]{String.valueOf(userId), String.valueOf(productId)});
+            success = rowsUpdated > 0;
+        } else {
+            // Insert new item
+            values.put(COLUMN_INVENTORY_USER_ID, userId);
+            values.put(COLUMN_INVENTORY_PRODUCT_ID, productId);
+            values.put(COLUMN_INVENTORY_QUANTITY, quantity);
+
+            long result = db.insert(TABLE_USER_INVENTORY, null, values);
+            success = result != -1;
+        }
+
+        cursor.close();
+        db.close();
+        return success;
     }
 }

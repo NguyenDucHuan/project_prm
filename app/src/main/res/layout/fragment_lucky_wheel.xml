@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="@color/background_light">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Wheel Header -->
+        <TextView
+            android:id="@+id/wheel_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Mystery Sticker Wheel"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:gravity="center"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/wheel_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Spin to win amazing stickers!"
+            android:textSize="16sp"
+            android:textColor="@color/text_secondary"
+            android:gravity="center"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Wheel Image -->
+        <ImageView
+            android:id="@+id/wheel_image"
+            android:layout_width="250dp"
+            android:layout_height="250dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_wheel_placeholder"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Spin Count Selection -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Select Spin Count:"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="8dp" />
+
+        <RadioGroup
+            android:id="@+id/spin_count_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+
+            <RadioButton
+                android:id="@+id/spin_1x"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="x1"
+                android:textColor="@color/text_primary"
+                android:checked="true" />
+
+            <RadioButton
+                android:id="@+id/spin_2x"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="x2"
+                android:textColor="@color/text_primary" />
+
+            <RadioButton
+                android:id="@+id/spin_3x"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="x3"
+                android:textColor="@color/text_primary" />
+
+            <RadioButton
+                android:id="@+id/spin_4x"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="x4"
+                android:textColor="@color/text_primary" />
+
+            <RadioButton
+                android:id="@+id/spin_5x"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="x5"
+                android:textColor="@color/text_primary" />
+
+        </RadioGroup>
+
+        <!-- Total Cost -->
+        <TextView
+            android:id="@+id/total_cost"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Total: $5.00"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary_blue"
+            android:gravity="center"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Pay and Spin Button -->
+        <Button
+            android:id="@+id/pay_and_spin_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Pay &amp; Spin"
+            android:textSize="18sp"
+            android:backgroundTint="@color/purple_500"
+            android:textColor="@color/white"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Results Section -->
+        <LinearLayout
+            android:id="@+id/results_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Spin Results:"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="8dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/results_recycler_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp" />
+
+            <Button
+                android:id="@+id/save_to_inventory_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Save to Inventory"
+                android:textSize="16sp"
+                android:backgroundTint="@color/teal_200"
+                android:textColor="@color/white" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>
