@@ -90,7 +90,7 @@
                 android:text="-"
                 android:textSize="18sp"
                 android:background="@drawable/quantity_button_background"
-                android:textColor="#666666" />
+                android:textColor="#ffffff" />
 
             <TextView
                 android:id="@+id/tv_quantity"
@@ -110,7 +110,7 @@
                 android:text="+"
                 android:textSize="18sp"
                 android:background="@drawable/quantity_button_background"
-                android:textColor="#666666" />
+                android:textColor="#ffffff" />
 
         </LinearLayout>
 
