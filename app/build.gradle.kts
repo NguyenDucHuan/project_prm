@@ -41,7 +41,15 @@ dependencies {
     implementation(libs.navigation.ui)
     implementation(libs.picasso)
     implementation(libs.json)
+    implementation(fileTree(mapOf(
+        "dir" to "D:\\Tuntuntunsahur\\PRM\\ZaloPayLib",
+        "include" to listOf("*.aar", "*.jar"),
+        "exclude" to listOf("")
+    )))
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    implementation("com.squareup.okhttp3:okhttp:4.6.0")
+    implementation("commons-codec:commons-codec:1.14")
+
 }
