@@ -13,13 +13,14 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.navigation.Navigation;
 import fpt.edu.vn.stickershop.R;
 import fpt.edu.vn.stickershop.database.DatabaseHelper;
 
 public class AccountFragment extends Fragment {
     private TextView userNameTextView, userEmailTextView;
-    private Button logoutButton, myOrdersButton;
+    private Button logoutButton, myOrdersButton, myInventoryButton;
     private DatabaseHelper dbHelper;
 
     @Override
@@ -30,6 +31,7 @@ public class AccountFragment extends Fragment {
         userEmailTextView = view.findViewById(R.id.user_email);
         logoutButton = view.findViewById(R.id.logout_button);
         myOrdersButton = view.findViewById(R.id.my_orders_button);
+        myInventoryButton = view.findViewById(R.id.my_inventory_button);
         dbHelper = new DatabaseHelper(getContext());
 
         loadUserInfo();
@@ -37,7 +39,7 @@ public class AccountFragment extends Fragment {
         myOrdersButton.setOnClickListener(v -> {
             SharedPreferences prefs = requireContext().getSharedPreferences("StickerShopPrefs", Context.MODE_PRIVATE);
             int userId = prefs.getInt("user_id", -1);
-            
+
             if (userId != -1) {
                 Navigation.findNavController(v).navigate(R.id.action_accountFragment_to_orderTrackingFragment);
             } else {
@@ -45,31 +47,54 @@ public class AccountFragment extends Fragment {
             }
         });
 
+        // New inventory button click handler
+        myInventoryButton.setOnClickListener(v -> {
+            SharedPreferences prefs = requireContext().getSharedPreferences("StickerShopPrefs", Context.MODE_PRIVATE);
+            int userId = prefs.getInt("user_id", -1);
+
+            if (userId != -1) {
+                openInventoryFragment();
+            } else {
+                Toast.makeText(getContext(), "Please login to view inventory", Toast.LENGTH_SHORT).show();
+            }
+        });
+
         logoutButton.setOnClickListener(v -> {
             // Clear user session
             SharedPreferences prefs = getContext().getSharedPreferences("StickerShopPrefs", Context.MODE_PRIVATE);
             prefs.edit().clear().apply();
-            
+
             // Navigate back to login and clear back stack
             Navigation.findNavController(v).navigate(R.id.action_accountFragment_to_loginFragment);
         });
 
         return view;
     }
-    
+
+    private void openInventoryFragment() {
+        try {
+            // Sử dụng Navigation Component thay vì FragmentTransaction
+            Navigation.findNavController(requireView()).navigate(R.id.inventoryFragment);
+            Toast.makeText(getContext(), "Opening your inventory...", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(getContext(), "Could not open inventory. Please try again.", Toast.LENGTH_SHORT).show();
+            Log.e("AccountFragment", "Error navigating to inventory", e);
+        }
+    }
+
     private void loadUserInfo() {
         try {
             SharedPreferences prefs = getContext().getSharedPreferences("StickerShopPrefs", Context.MODE_PRIVATE);
             int userId = prefs.getInt("user_id", -1);
             Log.d("AccountFragment", "Loading user info for user ID: " + userId);
-            
+
             if (userId != -1) {
                 SQLiteDatabase db = dbHelper.getReadableDatabase();
                 Cursor cursor = db.query(DatabaseHelper.TABLE_USERS,
                         new String[]{DatabaseHelper.COLUMN_NAME, DatabaseHelper.COLUMN_EMAIL},
                         DatabaseHelper.COLUMN_USER_ID + "=?", new String[]{String.valueOf(userId)},
                         null, null, null);
-                
+
                 if (cursor.moveToFirst()) {
                     String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_NAME));
                     String email = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_EMAIL));
@@ -87,6 +112,7 @@ public class AccountFragment extends Fragment {
                 userNameTextView.setText("Name: Guest User");
                 userEmailTextView.setText("Email: guest@example.com");
                 myOrdersButton.setEnabled(false);
+                myInventoryButton.setEnabled(false);
             }
         } catch (Exception e) {
             Log.e("AccountFragment", "Error loading user info", e);

@@ -11,7 +11,7 @@
         android:title="Search" />
 
     <item
-        android:id="@+id/luckyBoxFragment"
+        android:id="@+id/luckyWheelListFragment"
         android:icon="@drawable/ic_lucky_wheel"
         android:title="Lucky Wheel" />
 

@@ -27,6 +27,16 @@
             app:destination="@id/loginFragment" />
     </fragment>
 
+    <!-- Lucky Wheel List Fragment (NEW) -->
+    <fragment
+        android:id="@+id/luckyWheelListFragment"
+        android:name="fpt.edu.vn.stickershop.fragments.LuckyWheelListFragment"
+        android:label="Lucky Wheels">
+        <action
+            android:id="@+id/action_luckyWheelListFragment_to_luckyBoxFragment"
+            app:destination="@id/luckyBoxFragment" />
+    </fragment>
+
     <fragment
         android:id="@+id/homeFragment"
         android:name="fpt.edu.vn.stickershop.fragments.HomeFragment"
@@ -35,17 +45,8 @@
             android:id="@+id/action_homeFragment_to_productDetailFragment"
             app:destination="@id/productDetailFragment" />
         <action
-            android:id="@+id/action_homeFragment_to_luckyBoxFragment"
-            app:destination="@id/luckyBoxFragment" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/categoryFragment"
-        android:name="fpt.edu.vn.stickershop.fragments.CategoryFragment"
-        android:label="Categories">
-        <action
-            android:id="@+id/action_categoryFragment_to_productDetailFragment"
-            app:destination="@id/productDetailFragment" />
+            android:id="@+id/action_homeFragment_to_luckyWheelListFragment"
+            app:destination="@id/luckyWheelListFragment" />
     </fragment>
 
     <fragment
@@ -55,9 +56,12 @@
         <action
             android:id="@+id/action_searchFragment_to_productDetailFragment"
             app:destination="@id/productDetailFragment" />
+        <action
+            android:id="@+id/action_searchFragment_to_luckyWheelListFragment"
+            app:destination="@id/luckyWheelListFragment" />
     </fragment>
 
-    <!-- Lucky Wheel Fragment -->
+    <!-- Lucky Box Fragment (Updated) -->
     <fragment
         android:id="@+id/luckyBoxFragment"
         android:name="fpt.edu.vn.stickershop.fragments.LuckyBoxFragment"
@@ -65,13 +69,20 @@
         <action
             android:id="@+id/action_luckyBoxFragment_to_inventoryFragment"
             app:destination="@id/inventoryFragment" />
+        <action
+            android:id="@+id/action_luckyBoxFragment_to_luckyWheelListFragment"
+            app:destination="@id/luckyWheelListFragment" />
     </fragment>
 
     <!-- Inventory Fragment -->
     <fragment
         android:id="@+id/inventoryFragment"
         android:name="fpt.edu.vn.stickershop.fragments.InventoryFragment"
-        android:label="My Inventory" />
+        android:label="My Inventory">
+        <action
+            android:id="@+id/action_inventoryFragment_to_luckyWheelListFragment"
+            app:destination="@id/luckyWheelListFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/productDetailFragment"
@@ -93,6 +104,9 @@
         <action
             android:id="@+id/action_cartFragment_to_checkoutFragment"
             app:destination="@id/checkoutFragment" />
+        <action
+            android:id="@+id/action_cartFragment_to_luckyWheelListFragment"
+            app:destination="@id/luckyWheelListFragment" />
     </fragment>
 
     <fragment
@@ -126,6 +140,12 @@
         <action
             android:id="@+id/action_accountFragment_to_orderTrackingFragment"
             app:destination="@id/orderTrackingFragment" />
+        <action
+            android:id="@+id/action_accountFragment_to_inventoryFragment"
+            app:destination="@id/inventoryFragment" />
+        <action
+            android:id="@+id/action_accountFragment_to_luckyWheelListFragment"
+            app:destination="@id/luckyWheelListFragment" />
     </fragment>
 
     <fragment
