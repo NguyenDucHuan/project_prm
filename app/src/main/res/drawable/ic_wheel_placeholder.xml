@@ -1,0 +1,46 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+    <!-- Outer circle -->
+    <path
+        android:pathData="M100,100m-90,0a90,90 0,1 1,180 0a90,90 0,1 1,-180 0"
+        android:fillColor="#FF6B35"/>
+
+    <!-- Inner segments -->
+    <path
+        android:pathData="M100,100 L100,10 A90,90 0,0,1 163.64,45.36 Z"
+        android:fillColor="#F7931E"/>
+
+    <path
+        android:pathData="M100,100 L163.64,45.36 A90,90 0,0,1 163.64,154.64 Z"
+        android:fillColor="#FFD23F"/>
+
+    <path
+        android:pathData="M100,100 L163.64,154.64 A90,90 0,0,1 100,190 Z"
+        android:fillColor="#EE4035"/>
+
+    <path
+        android:pathData="M100,100 L100,190 A90,90 0,0,1 36.36,154.64 Z"
+        android:fillColor="#7BC043"/>
+
+    <path
+        android:pathData="M100,100 L36.36,154.64 A90,90 0,0,1 36.36,45.36 Z"
+        android:fillColor="#0392CF"/>
+
+    <path
+        android:pathData="M100,100 L36.36,45.36 A90,90 0,0,1 100,10 Z"
+        android:fillColor="#9B59B6"/>
+
+    <!-- Center circle using path instead of circle -->
+    <path
+        android:pathData="M100,100m-15,0a15,15 0,1 1,30 0a15,15 0,1 1,-30 0"
+        android:fillColor="#FFFFFF"/>
+
+    <!-- Pointer -->
+    <path
+        android:pathData="M100,5 L105,20 L95,20 Z"
+        android:fillColor="#2C3E50"/>
+</vector>

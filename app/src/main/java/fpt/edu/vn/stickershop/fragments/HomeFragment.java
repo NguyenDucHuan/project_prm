@@ -10,6 +10,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -19,52 +20,22 @@ import java.util.List;
 import fpt.edu.vn.stickershop.R;
 import fpt.edu.vn.stickershop.adapters.ProductAdapter;
 import fpt.edu.vn.stickershop.database.DatabaseHelper;
+import fpt.edu.vn.stickershop.dialogs.AddToCartDialog;
 import fpt.edu.vn.stickershop.models.Product;
 
-public class HomeFragment extends Fragment {
+public class HomeFragment extends Fragment implements AddToCartDialog.OnCartUpdatedListener {
     private RecyclerView recyclerView;
     private ProductAdapter productAdapter;
     private DatabaseHelper dbHelper;
     private TextView emptyTextView;
+    private List<Product> productList; // Add this field
 
-    //    @Override
-//    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-//        View view = inflater.inflate(R.layout.fragment_home, container, false);
-//        Log.d("HomeFragment", "onCreateView started");
-//
-//
-//        recyclerView = view.findViewById(R.id.product_recycler_view);
-//        emptyTextView = view.findViewById(R.id.empty_text);
-//
-//        if (getContext() == null) {
-//            Log.e("HomeFragment", "Context is null");
-//            return view;
-//        }
-//        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-//        dbHelper = new DatabaseHelper(getContext());
-//
-//        List<Product> products = getProducts();
-//        Log.d("HomeFragment", "Found " + products.size() + " products");
-//
-//        if (products.isEmpty()) {
-//            recyclerView.setVisibility(View.GONE);
-//            emptyTextView.setVisibility(View.VISIBLE);
-//            emptyTextView.setText("No products available");
-//        } else {
-//            recyclerView.setVisibility(View.VISIBLE);
-//            emptyTextView.setVisibility(View.GONE);
-//            productAdapter = new ProductAdapter(products);
-//            recyclerView.setAdapter(productAdapter);
-//        }
-//
-//        return view;
-//    }
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
         Log.d("HomeFragment", "onCreateView started");
 
-        // Remove duplicate initialization
+        // Initialize views
         recyclerView = view.findViewById(R.id.product_recycler_view);
         emptyTextView = view.findViewById(R.id.empty_text);
 
@@ -73,37 +44,39 @@ public class HomeFragment extends Fragment {
             return view;
         }
 
-        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         dbHelper = new DatabaseHelper(getContext());
 
-        List<Product> products = getProducts();
-        updateUI(products); // Use the existing updateUI method
+        // Load products and setup UI
+        productList = getProducts();
+        setupRecyclerView();
+        updateUI(productList);
 
         return view;
     }
 
-    //    private List<Product> getProducts() {
-//        List<Product> products = new ArrayList<>();
-//        try {
-//            SQLiteDatabase db = dbHelper.getReadableDatabase();
-//            Cursor cursor = db.query(DatabaseHelper.TABLE_PRODUCTS, null, null, null, null, null, null);
-//            Log.d("HomeFragment", "Database query returned " + cursor.getCount() + " rows");
-//
-//            while (cursor.moveToNext()) {
-//                int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PRODUCT_ID));
-//                String name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PRODUCT_NAME));
-//                double price = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PRODUCT_PRICE));
-//                String imageUrl = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PRODUCT_IMAGE));
-//                String type = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PRODUCT_TYPE));
-//                products.add(new Product(id, name, price, imageUrl, type));
-//                Log.d("HomeFragment", "Added product: " + name);
-//            }
-//            cursor.close();
-//        } catch (Exception e) {
-//            Log.e("HomeFragment", "Error loading products", e);
-//        }
-//        return products;
-//    }
+    private void setupRecyclerView() {
+        recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 1));
+
+        // Initialize productList if null
+        if (productList == null) {
+            productList = new ArrayList<>();
+        }
+
+        // Pass cart update listener to adapter
+        productAdapter = new ProductAdapter(productList, this);
+        recyclerView.setAdapter(productAdapter);
+    }
+
+    @Override
+    public void onCartUpdated() {
+        // Handle cart update if needed (e.g., update cart badge, refresh data)
+        // You can add any logic here that should run after cart is updated
+
+        // Example: Update cart badge count if you have one
+        // updateCartBadge();
+        Log.d("HomeFragment", "Cart updated successfully");
+    }
+
     private List<Product> getProducts() {
         List<Product> products = new ArrayList<>();
         SQLiteDatabase db = null;
@@ -157,8 +130,15 @@ public class HomeFragment extends Fragment {
             Log.d("HomeFragment", "Products found, showing list");
             recyclerView.setVisibility(View.VISIBLE);
             emptyTextView.setVisibility(View.GONE);
-            productAdapter = new ProductAdapter(products);
-            recyclerView.setAdapter(productAdapter);
+
+            // Update adapter if it exists, otherwise create new one
+            if (productAdapter != null) {
+                // If you want to update existing adapter with new data
+                productAdapter.updateProducts(products);
+            } else {
+                productAdapter = new ProductAdapter(products, this);
+                recyclerView.setAdapter(productAdapter);
+            }
         }
     }
 }
