@@ -1,8 +1,10 @@
 package fpt.edu.vn.stickershop;
 
 import android.content.ContentValues;
+import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.View;
 
@@ -13,6 +15,7 @@ import androidx.navigation.ui.NavigationUI;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import fpt.edu.vn.stickershop.database.DatabaseHelper;
+import vn.zalopay.sdk.ZaloPaySDK;
 
 public class MainActivity extends AppCompatActivity {
 //    @Override
@@ -34,6 +37,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // GỌI SDK nếu Intent chứa data từ scheme URL (ví dụ: stickershop://app)
+        if (getIntent() != null && getIntent().getData() != null) {
+            ZaloPaySDK.getInstance().onResult(getIntent());
+            Log.d("ZaloPay", "Handled ZaloPay deep link in onCreate()");
+        }
         // Initialize database
         DatabaseHelper dbHelper = new DatabaseHelper(this);
         SQLiteDatabase db = dbHelper.getWritableDatabase();
@@ -63,5 +71,19 @@ public class MainActivity extends AppCompatActivity {
             Log.e("MainActivity", "NavHostFragment is null");
         }
     }
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        ZaloPaySDK.getInstance().onResult(data); // Thực hiện ở Activity
+    }
 
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent); // cập nhật lại intent chính
+        if (intent.getData() != null) {
+            ZaloPaySDK.getInstance().onResult(intent);
+            Log.d("ZaloPay", "Handled ZaloPay deep link in onNewIntent()");
+        }
+    }
 }

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -82,8 +83,10 @@ public class CheckoutFragment extends Fragment {
             for (CartItem item : cartItems) {
                 totalAmount += item.getTotalPrice();
             }
+            // Convert USD to VND (1 USD = 25,000 VND)
+            double vndAmount = totalAmount * 25000;
             NumberFormat vnd = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
-            totalAmountText.setText("Total Amount: " + vnd.format(totalAmount));
+            totalAmountText.setText("Total Amount: " + vnd.format(vndAmount));
         }
     }
 
@@ -92,18 +95,15 @@ public class CheckoutFragment extends Fragment {
         
         if (address.isEmpty()) {
             addressInput.setError("Please enter shipping address");
-            Log.e("CheckoutFragment", "Shipping address is empty");
             return;
         }
 
         // Get user ID
         SharedPreferences prefs = requireContext().getSharedPreferences("StickerShopPrefs", Context.MODE_PRIVATE);
         int userId = prefs.getInt("user_id", -1);
-        Log.d("CheckoutFragment", "User ID: " + userId);
         
         if (userId == -1) {
             Toast.makeText(getContext(), "Please login first", Toast.LENGTH_SHORT).show();
-            Log.d("CheckoutFragment", "User not logged in");
             return;
         }
 
@@ -113,16 +113,13 @@ public class CheckoutFragment extends Fragment {
 
             if (cartItems.isEmpty()) {
                 Toast.makeText(getContext(), "Your cart is empty", Toast.LENGTH_SHORT).show();
-                Log.d("CheckoutFragment", "Cart is empty");
                 return;
             }
 
             // Check payment method
             if (paymentMethodGroup.getCheckedRadioButtonId() == R.id.zalopay_radio) {
-                Log.d("CheckoutFragment", "Processing ZaloPay payment");
                 processZaloPayPayment();
             } else {
-                Log.d("CheckoutFragment", "Processing COD order");
                 processCODOrder(userId, address, cartItems);
             }
 
@@ -135,70 +132,93 @@ public class CheckoutFragment extends Fragment {
     private void processZaloPayPayment() {
         new Thread(() -> {
             try {
-                // Chuyển đổi số tiền đúng định dạng ZaloPay (VND, không có phần lẻ)
-                long amount = (long) (totalAmount * 1000); // Ví dụ: 5.97 USD → 5970 VND
-                Log.d("CheckoutFragment", "Creating ZaloPay order with amount: " + amount);
-
-                // Gọi API tạo đơn hàng
                 CreateOrder orderApi = new CreateOrder();
-                JSONObject data = orderApi.createOrder(String.valueOf(amount));
+                // Convert USD to VND (1 USD = 25,000 VND) and convert to long
+                long vndAmount = (long)(totalAmount * 25000);
+                JSONObject data = orderApi.createOrder(String.valueOf(vndAmount));
 
-                if (data == null) {
-                    throw new Exception("ZaloPay response is null");
-                }
-
-                Log.d("CheckoutFragment", "ZaloPay order response: " + data.toString());
-
-                // Kiểm tra return_code
-                if (!data.has("return_code") || !"1".equals(data.getString("return_code"))) {
-                    String errorMessage = data.has("return_message") ? data.getString("return_message") : "Unknown error";
-                    Log.e("CheckoutFragment", "Failed to create ZaloPay order: " + errorMessage);
-
-                    requireActivity().runOnUiThread(() ->
-                            Toast.makeText(getContext(), "ZaloPay Error: " + errorMessage, Toast.LENGTH_SHORT).show()
-                    );
+                if (!"1".equals(data.getString("return_code"))) {
+                    requireActivity().runOnUiThread(() -> 
+                        Toast.makeText(getContext(), "Failed to create ZaloPay order", Toast.LENGTH_SHORT).show());
                     return;
                 }
 
-                // Nhận zp_trans_token và gọi ZaloPay SDK
                 String zpTransToken = data.getString("zp_trans_token");
 
                 requireActivity().runOnUiThread(() -> {
-                    ZaloPaySDK.getInstance().payOrder(requireActivity(), zpTransToken, "zalopay://app", new PayOrderListener() {
-                        @Override
-                        public void onPaymentSucceeded(String transactionId, String transToken, String appTransID) {
-                            Toast.makeText(getContext(), "Payment successful!", Toast.LENGTH_SHORT).show();
-                            Log.d("CheckoutFragment", "Payment succeeded: " + transactionId);
+                    // Use the app's scheme URL for callback
+                    ZaloPaySDK.getInstance().payOrder(requireActivity(), 
+                        zpTransToken, 
+                        "stickershop://app", // Use our app's scheme URL
+                        new PayOrderListener() {
+                            @Override
+                            public void onPaymentSucceeded(final String transactionId, final String transToken, final String appTransID) {
+                                // Process successful payment
+                                requireActivity().runOnUiThread(() -> {
+                                    // Get user info and cart items
+                                    SharedPreferences prefs = requireContext().getSharedPreferences("StickerShopPrefs", Context.MODE_PRIVATE);
+                                    int userId = prefs.getInt("user_id", -1);
+                                    String address = addressInput.getText().toString().trim();
+                                    List<CartItem> cartItems = dbHelper.getCartItems(userId);
 
-                            // Sau khi thanh toán thành công → lưu đơn hàng
-                            int userId = requireContext().getSharedPreferences("StickerShopPrefs", Context.MODE_PRIVATE)
-                                    .getInt("user_id", -1);
-                            List<CartItem> cartItems = dbHelper.getCartItems(userId);
-                            processCODOrder(userId, addressInput.getText().toString().trim(), cartItems);
-                        }
+                                    // Save order to database
+                                    long orderId = dbHelper.saveOrderWithItems(userId, address, cartItems);
+                                    
+                                    if (orderId != -1) {
+                                        // Clear cart after successful order
+                                        dbHelper.clearCart(userId);
 
-                        @Override
-                        public void onPaymentCanceled(String zpTransToken, String appTransID) {
-                            Toast.makeText(getContext(), "Payment cancelled", Toast.LENGTH_SHORT).show();
-                            Log.d("CheckoutFragment", "Payment cancelled: " + zpTransToken);
-                        }
+                                        // Save payment details
+                                        savePaymentDetails(transactionId, transToken, appTransID, vndAmount);
 
-                        @Override
-                        public void onPaymentError(ZaloPayError zaloPayError, String zpTransToken, String appTransID) {
-                            Toast.makeText(getContext(), "Payment error: " + zaloPayError.toString(), Toast.LENGTH_SHORT).show();
-                            Log.e("CheckoutFragment", "Payment error: " + zaloPayError.toString());
-                        }
+                                        // Show success message
+                                        NumberFormat vnd = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+                                        String message = String.format("Payment successful!\nOrder ID: #%d\nTotal: %s", 
+                                            orderId, vnd.format(vndAmount));
+                                        
+                                        new android.app.AlertDialog.Builder(requireContext())
+                                            .setTitle("Order Confirmation")
+                                            .setMessage(message)
+                                            .setPositiveButton("Continue Shopping", (dialog, which) -> {
+                                                // Navigate to home screen
+                                                Navigation.findNavController(requireView())
+                                                    .navigate(R.id.action_checkoutFragment_to_homeFragment);
+                                            })
+                                            .setCancelable(false)
+                                            .show();
+                                    } else {
+                                        Toast.makeText(getContext(), "Error saving order", Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void onPaymentCanceled(String zpTransToken, String appTransID) {
+                                requireActivity().runOnUiThread(() -> {
+                                    Toast.makeText(getContext(), "Payment cancelled", Toast.LENGTH_SHORT).show();
+                                    Log.d("CheckoutFragment", "Payment cancelled: " + appTransID);
+                                });
+                            }
+
+                            @Override
+                            public void onPaymentError(ZaloPayError zaloPayError, String zpTransToken, String appTransID) {
+                                requireActivity().runOnUiThread(() -> {
+                                    Toast.makeText(getContext(), 
+                                        "Payment error: " + zaloPayError.toString(), 
+                                        Toast.LENGTH_SHORT).show();
+                                    Log.e("CheckoutFragment", "Payment error: " + zaloPayError.toString());
+                                });
+                            }
                     });
                 });
 
             } catch (Exception e) {
                 Log.e("CheckoutFragment", "Error processing ZaloPay payment", e);
-                requireActivity().runOnUiThread(() ->
-                        Toast.makeText(getContext(), "ZaloPay Exception: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                requireActivity().runOnUiThread(() -> 
+                    Toast.makeText(getContext(), "Error processing payment", Toast.LENGTH_SHORT).show());
             }
         }).start();
     }
-
 
     private void processCODOrder(int userId, String address, List<CartItem> cartItems) {
         // Save order with items
@@ -213,16 +233,17 @@ public class CheckoutFragment extends Fragment {
             int totalItems = 0;
             for (CartItem item : cartItems) {
                 totalAmount += item.getTotalPrice();
-                totalItems += item.getQuantity();
             }
+            // Convert USD to VND
+            double vndAmount = totalAmount * 25000;
 
             Toast.makeText(getContext(),
                     String.format("Order placed successfully! %d items, Total: %s", 
-                        totalItems, NumberFormat.getCurrencyInstance(new Locale("vi", "VN")).format(totalAmount)),
+                        totalItems, NumberFormat.getCurrencyInstance(new Locale("vi", "VN")).format(vndAmount)),
                     Toast.LENGTH_LONG).show();
 
             // Show confirmation with detailed info
-            showOrderConfirmation(String.valueOf(orderId), address, totalItems, totalAmount);
+            showOrderConfirmation(String.valueOf(orderId), address, totalItems, vndAmount);
         } else {
             Toast.makeText(getContext(), "Error processing order", Toast.LENGTH_SHORT).show();
         }
@@ -242,9 +263,25 @@ public class CheckoutFragment extends Fragment {
                 address, itemCount, vnd.format(totalAmount)));
     }
 
+    private void savePaymentDetails(String transactionId, String transToken, String appTransID, long amount) {
+        try {
+            // TODO: Save payment details to database
+            Log.d("CheckoutFragment", String.format(
+                "Payment details - TransactionID: %s, Token: %s, AppTransID: %s, Amount: %d VND",
+                transactionId, transToken, appTransID, amount));
+        } catch (Exception e) {
+            Log.e("CheckoutFragment", "Error saving payment details", e);
+        }
+    }
+
     @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        ZaloPaySDK.getInstance().onResult(data);
+        ZaloPaySDK.getInstance().onResult(data); // Rất quan trọng nếu bạn không truyền từ Fragment
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
     }
 }
