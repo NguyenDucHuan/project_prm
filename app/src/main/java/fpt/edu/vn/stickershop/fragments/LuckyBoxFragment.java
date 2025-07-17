@@ -27,12 +27,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import androidx.navigation.Navigation;
+
+import fpt.edu.vn.stickershop.Api.CreateOrder;
 import fpt.edu.vn.stickershop.R;
 import fpt.edu.vn.stickershop.adapters.SpinResultAdapter;
 import fpt.edu.vn.stickershop.database.DatabaseHelper;
 import fpt.edu.vn.stickershop.models.LuckyWheel;
 import fpt.edu.vn.stickershop.models.SpinResult;
 import fpt.edu.vn.stickershop.models.WheelItem;
+import vn.zalopay.sdk.Environment;
+import vn.zalopay.sdk.ZaloPayError;
+import vn.zalopay.sdk.ZaloPaySDK;
+import vn.zalopay.sdk.listeners.PayOrderListener;
+
+import android.util.Log;
+import android.content.Intent;
+import org.json.JSONObject;
 
 public class LuckyBoxFragment extends Fragment {
     private TextView wheelNameTextView, wheelDescriptionTextView, totalCostTextView;
@@ -51,6 +61,9 @@ public class LuckyBoxFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_lucky_wheel, container, false);
+
+        // Initialize ZaloPay SDK
+        ZaloPaySDK.init(2553, Environment.SANDBOX);
 
         initViews(view);
         dbHelper = new DatabaseHelper(getContext());
@@ -79,27 +92,6 @@ public class LuckyBoxFragment extends Fragment {
 
         // Initially hide results
         resultsLayout.setVisibility(View.GONE);
-    }
-    @Override
-    public void onResume() {
-        super.onResume();
-
-        // Handle system back button
-        requireActivity().getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
-            @Override
-            public void handleOnBackPressed() {
-                android.util.Log.d("LuckyBoxFragment", "System back pressed - navigating to wheel list");
-
-                try {
-                    Navigation.findNavController(requireView())
-                            .navigate(R.id.action_luckyBoxFragment_to_luckyWheelListFragment);
-                } catch (Exception e) {
-                    // If navigation fails, use default back behavior
-                    setEnabled(false);
-                    requireActivity().onBackPressed();
-                }
-            }
-        });
     }
 
     private void setupBackButton() {
@@ -215,14 +207,118 @@ public class LuckyBoxFragment extends Fragment {
     }
 
     private void processPaymentAndSpin() {
-        // Simulate payment processing
-        Toast.makeText(getContext(), "Payment processed successfully!", Toast.LENGTH_SHORT).show();
+        double totalCost = currentWheel.getCost() * selectedSpinCount;
+        // Convert USD to VND (1 USD = 25,000 VND)
+        long vndAmount = (long)(totalCost * 25000);
 
-        // Start spinning animation
-        animateWheelSpin();
+        new Thread(() -> {
+            try {
+                CreateOrder orderApi = new CreateOrder();
+                JSONObject data = orderApi.createOrder(String.valueOf(vndAmount));
 
-        // Perform spins
-        performSpins();
+                if (!"1".equals(data.getString("return_code"))) {
+                    requireActivity().runOnUiThread(() -> 
+                        Toast.makeText(getContext(), "Failed to create ZaloPay order", Toast.LENGTH_SHORT).show());
+                    return;
+                }
+
+                String zpTransToken = data.getString("zp_trans_token");
+
+                requireActivity().runOnUiThread(() -> {
+                    // Use the app's scheme URL for callback
+                    ZaloPaySDK.getInstance().payOrder(requireActivity(), 
+                        zpTransToken, 
+                        "stickershop://app", // Use our app's scheme URL
+                        new PayOrderListener() {
+                            @Override
+                            public void onPaymentSucceeded(final String transactionId, final String transToken, final String appTransID) {
+                                // Process successful payment
+                                requireActivity().runOnUiThread(() -> {
+                                    Toast.makeText(getContext(), "Payment successful!", Toast.LENGTH_SHORT).show();
+                                    
+                                    // Save payment details
+                                    savePaymentDetails(transactionId, transToken, appTransID, vndAmount);
+
+                                    // Start spinning animation
+                                    animateWheelSpin();
+
+                                    // Perform spins
+                                    performSpins();
+                                });
+                            }
+
+                            @Override
+                            public void onPaymentCanceled(String zpTransToken, String appTransID) {
+                                requireActivity().runOnUiThread(() -> {
+                                    Toast.makeText(getContext(), "Payment cancelled", Toast.LENGTH_SHORT).show();
+                                    Log.d("LuckyBoxFragment", "Payment cancelled: " + appTransID);
+                                });
+                            }
+
+                            @Override
+                            public void onPaymentError(ZaloPayError zaloPayError, String zpTransToken, String appTransID) {
+                                requireActivity().runOnUiThread(() -> {
+                                    Toast.makeText(getContext(), 
+                                        "Payment error: " + zaloPayError.toString(), 
+                                        Toast.LENGTH_SHORT).show();
+                                    Log.e("LuckyBoxFragment", "Payment error: " + zaloPayError.toString());
+                                });
+                            }
+                    });
+                });
+
+            } catch (Exception e) {
+                Log.e("LuckyBoxFragment", "Error processing ZaloPay payment", e);
+                requireActivity().runOnUiThread(() -> 
+                    Toast.makeText(getContext(), "Error processing payment", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    private void savePaymentDetails(String transactionId, String transToken, String appTransID, long amount) {
+        try {
+            // TODO: Save payment details to database
+            Log.d("LuckyBoxFragment", String.format(
+                "Payment details - TransactionID: %s, Token: %s, AppTransID: %s, Amount: %d VND",
+                transactionId, transToken, appTransID, amount));
+        } catch (Exception e) {
+            Log.e("LuckyBoxFragment", "Error saving payment details", e);
+        }
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        ZaloPaySDK.getInstance().onResult(data);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Check if we have any pending ZaloPay result
+        if (requireActivity().getIntent() != null && requireActivity().getIntent().getData() != null) {
+            String scheme = requireActivity().getIntent().getData().getScheme();
+            if ("stickershop".equals(scheme)) {
+                ZaloPaySDK.getInstance().onResult(requireActivity().getIntent());
+            }
+        }
+
+        // Handle system back button
+        requireActivity().getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                android.util.Log.d("LuckyBoxFragment", "System back pressed - navigating to wheel list");
+
+                try {
+                    Navigation.findNavController(requireView())
+                            .navigate(R.id.action_luckyBoxFragment_to_luckyWheelListFragment);
+                } catch (Exception e) {
+                    // If navigation fails, use default back behavior
+                    setEnabled(false);
+                    requireActivity().onBackPressed();
+                }
+            }
+        });
     }
 
     private void animateWheelSpin() {

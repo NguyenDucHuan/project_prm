@@ -42,7 +42,8 @@ dependencies {
     implementation(libs.picasso)
     implementation(libs.json)
     implementation(fileTree(mapOf(
-        "dir" to "E:\\TERM8\\PRM\\ZaloPayLib",
+//        "dir" to "E:\\TERM8\\PRM\\ZaloPayLib",
+        "dir" to "D:\\Tuntuntunsahur\\PRM\\ZaloPayLib",
         "include" to listOf("*.aar", "*.jar"),
         "exclude" to listOf("")
     )))
