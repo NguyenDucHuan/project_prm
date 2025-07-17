@@ -1,4 +1,3 @@
-
 package fpt.edu.vn.stickershop.adapters;
 
 import android.view.LayoutInflater;
@@ -27,7 +26,8 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.Inve
     @NonNull
     @Override
     public InventoryViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_inventory, parent, false);
+        View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_inventory, parent, false);
         return new InventoryViewHolder(view);
     }
 
@@ -37,15 +37,15 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.Inve
 
         holder.productNameTextView.setText(item.getProductName());
         holder.quantityTextView.setText(String.format("x%d", item.getQuantity()));
-        holder.dateTextView.setText(item.getDateObtained());
+        holder.dateObtainedTextView.setText("Obtained: " + item.getDateObtained());
 
         // Load product image
         if (item.getProductImage() != null && !item.getProductImage().isEmpty()) {
             if (item.getProductImage().startsWith("http")) {
                 Picasso.get()
                         .load(item.getProductImage())
-                        .placeholder(R.drawable.ic_product_placeholder)
-                        .error(R.drawable.ic_product_placeholder)
+                        .placeholder(R.drawable.ic_launcher_background)
+                        .error(R.drawable.ic_launcher_background)
                         .fit()
                         .centerCrop()
                         .into(holder.productImageView);
@@ -54,11 +54,11 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.Inve
                     int resourceId = Integer.parseInt(item.getProductImage());
                     holder.productImageView.setImageResource(resourceId);
                 } catch (NumberFormatException e) {
-                    holder.productImageView.setImageResource(R.drawable.ic_product_placeholder);
+                    holder.productImageView.setImageResource(R.drawable.ic_launcher_background);
                 }
             }
         } else {
-            holder.productImageView.setImageResource(R.drawable.ic_product_placeholder);
+            holder.productImageView.setImageResource(R.drawable.ic_launcher_background);
         }
     }
 
@@ -69,14 +69,16 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.Inve
 
     static class InventoryViewHolder extends RecyclerView.ViewHolder {
         ImageView productImageView;
-        TextView productNameTextView, quantityTextView, dateTextView;
+        TextView productNameTextView;
+        TextView quantityTextView;
+        TextView dateObtainedTextView;
 
         public InventoryViewHolder(@NonNull View itemView) {
             super(itemView);
-            productImageView = itemView.findViewById(R.id.inventory_item_image);
-            productNameTextView = itemView.findViewById(R.id.inventory_item_name);
-            quantityTextView = itemView.findViewById(R.id.inventory_item_quantity);
-            dateTextView = itemView.findViewById(R.id.inventory_item_date);
+            productImageView = itemView.findViewById(R.id.inventory_product_image);
+            productNameTextView = itemView.findViewById(R.id.inventory_product_name);
+            quantityTextView = itemView.findViewById(R.id.inventory_quantity);
+            dateObtainedTextView = itemView.findViewById(R.id.inventory_date_obtained);
         }
     }
 }

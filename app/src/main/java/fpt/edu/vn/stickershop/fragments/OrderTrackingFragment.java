@@ -49,13 +49,15 @@ public class OrderTrackingFragment extends Fragment {
 
         SQLiteDatabase db = dbHelper.getReadableDatabase();
 
+        // Cập nhật query để bao gồm order_type
         String query = "SELECT " +
                 DatabaseHelper.COLUMN_ORDER_ID + ", " +
                 DatabaseHelper.COLUMN_ORDER_STATUS + ", " +
                 DatabaseHelper.COLUMN_ORDER_TOTAL + ", " +
                 DatabaseHelper.COLUMN_ORDER_ADDRESS + ", " +
                 "COALESCE(" + DatabaseHelper.COLUMN_ORDER_TIMESTAMP + ", 'N/A') as timestamp, " +
-                "COALESCE(" + DatabaseHelper.COLUMN_ORDER_ITEM_COUNT + ", 0) as item_count " +
+                "COALESCE(" + DatabaseHelper.COLUMN_ORDER_ITEM_COUNT + ", 0) as item_count, " +
+                "COALESCE(" + DatabaseHelper.COLUMN_ORDER_TYPE + ", 'PURCHASE') as order_type " + // Thêm order_type
                 "FROM " + DatabaseHelper.TABLE_ORDERS +
                 " WHERE " + DatabaseHelper.COLUMN_USER_ID_FK + " = ? " +
                 "ORDER BY " + DatabaseHelper.COLUMN_ORDER_ID + " DESC";
@@ -69,8 +71,9 @@ public class OrderTrackingFragment extends Fragment {
             String address = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ORDER_ADDRESS));
             String timestamp = cursor.getString(cursor.getColumnIndexOrThrow("timestamp"));
             int itemCount = cursor.getInt(cursor.getColumnIndexOrThrow("item_count"));
+            String orderType = cursor.getString(cursor.getColumnIndexOrThrow("order_type")); // Get order type
 
-            orders.add(new Order(id, status, total, address, timestamp, itemCount));
+            orders.add(new Order(id, status, total, address, timestamp, itemCount, orderType));
         }
         cursor.close();
         db.close();

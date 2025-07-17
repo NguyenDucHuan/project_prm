@@ -10,9 +10,9 @@ public class OrderDetails {
     private String timestamp;
     private int itemCount;
     private List<OrderItem> orderItems;
+    private Order order; // Thêm field này
 
-    public OrderDetails(int orderId, String status, double total, String address,
-                        String timestamp, int itemCount, List<OrderItem> orderItems) {
+    public OrderDetails(int orderId, String status, double total, String address, String timestamp, int itemCount, List<OrderItem> orderItems) {
         this.orderId = orderId;
         this.status = status;
         this.total = total;
@@ -22,7 +22,7 @@ public class OrderDetails {
         this.orderItems = orderItems;
     }
 
-    // Getters
+    // Getters and setters
     public int getOrderId() { return orderId; }
     public String getStatus() { return status; }
     public double getTotal() { return total; }
@@ -30,4 +30,8 @@ public class OrderDetails {
     public String getTimestamp() { return timestamp; }
     public int getItemCount() { return itemCount; }
     public List<OrderItem> getOrderItems() { return orderItems; }
+
+    // Thêm getter/setter cho Order object
+    public Order getOrder() { return order; }
+    public void setOrder(Order order) { this.order = order; }
 }

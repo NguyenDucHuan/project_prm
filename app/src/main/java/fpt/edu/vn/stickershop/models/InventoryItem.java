@@ -8,6 +8,7 @@ public class InventoryItem {
     private String productImage;
     private int quantity;
     private String dateObtained;
+    private int withdrawQuantity = 0; // Thêm field này
 
     public InventoryItem(int id, int userId, int productId, String productName, String productImage, int quantity, String dateObtained) {
         this.id = id;
@@ -19,7 +20,7 @@ public class InventoryItem {
         this.dateObtained = dateObtained;
     }
 
-    // Getters and setters
+    // Existing getters and setters...
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
@@ -40,4 +41,10 @@ public class InventoryItem {
 
     public String getDateObtained() { return dateObtained; }
     public void setDateObtained(String dateObtained) { this.dateObtained = dateObtained; }
+
+    // New getter and setter for withdraw quantity
+    public int getWithdrawQuantity() { return withdrawQuantity; }
+    public void setWithdrawQuantity(int withdrawQuantity) {
+        this.withdrawQuantity = Math.max(0, Math.min(withdrawQuantity, quantity));
+    }
 }

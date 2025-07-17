@@ -4,6 +4,7 @@ import android.app.Dialog;
 import android.content.Context;
 import android.os.Bundle;
 import android.view.View;
+import fpt.edu.vn.stickershop.models.Order;
 import android.view.Window;
 import android.widget.TextView;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -50,18 +51,56 @@ public class OrderDetailsDialog extends Dialog {
     }
 
     private void loadOrderDetails() {
-        OrderDetails orderDetails = dbHelper.getOrderDetails(orderId);
+        try {
+            OrderDetails orderDetails = dbHelper.getOrderDetails(orderId);
 
-        if (orderDetails != null) {
-            orderIdText.setText(String.format("Order #%d", orderDetails.getOrderId()));
-            orderStatusText.setText(orderDetails.getStatus());
-            orderTotalText.setText(String.format("Total: $%.2f", orderDetails.getTotal()));
-            orderAddressText.setText(String.format("Address: %s", orderDetails.getAddress()));
-            orderTimestampText.setText(String.format("Ordered: %s", orderDetails.getTimestamp()));
+            if (orderDetails != null) {
+                Order order = orderDetails.getOrder();
 
-            // Setup items recycler view
-            OrderItemAdapter adapter = new OrderItemAdapter(orderDetails.getOrderItems());
-            orderItemsRecyclerView.setAdapter(adapter);
+                // KIỂM TRA NULL trước khi sử dụng
+                if (order != null) {
+                    // Hiển thị Order ID với prefix
+                    String orderPrefix = order.isWithdrawalOrder() ? "WD" : "OR";
+                    orderIdText.setText(String.format("Order #%s%03d", orderPrefix, order.getId()));
+
+                    // SỬA: statusText → orderStatusText
+                    orderStatusText.setText("Status: " + (order.getStatus() != null ? order.getStatus() : "Unknown"));
+
+                    if (order.isWithdrawalOrder()) {
+                        // SỬA: totalText → orderTotalText
+                        orderTotalText.setText("Total: FREE WITHDRAWAL");
+                    } else {
+                        orderTotalText.setText(String.format("Total: $%.2f", order.getTotal()));
+                    }
+
+                    // SỬA: addressText → orderAddressText
+                    orderAddressText.setText("Address: " + (order.getAddress() != null ? order.getAddress() : "N/A"));
+                    // SỬA: timestampText → orderTimestampText
+                    orderTimestampText.setText("Date: " + (order.getTimestamp() != null ? order.getTimestamp() : "N/A"));
+
+                    // Setup RecyclerView cho order items
+                    if (orderDetails.getOrderItems() != null && !orderDetails.getOrderItems().isEmpty()) {
+                        OrderItemAdapter adapter = new OrderItemAdapter(orderDetails.getOrderItems());
+                        // SỬA: itemsRecyclerView → orderItemsRecyclerView
+                        orderItemsRecyclerView.setAdapter(adapter);
+                    } else {
+                        // Hiển thị thông báo không có items
+                        android.util.Log.w("OrderDetailsDialog", "No order items found");
+                    }
+                } else {
+                    android.util.Log.e("OrderDetailsDialog", "Order object is null");
+                    orderIdText.setText("Order #N/A");
+                    // SỬA tất cả variable names
+                    orderStatusText.setText("Status: Unknown");
+                    orderTotalText.setText("Total: N/A");
+                    orderAddressText.setText("Address: N/A");
+                    orderTimestampText.setText("Date: N/A");
+                }
+            } else {
+                android.util.Log.e("OrderDetailsDialog", "OrderDetails is null for orderId: " + orderId);
+            }
+        } catch (Exception e) {
+            android.util.Log.e("OrderDetailsDialog", "Error loading order details", e);
         }
     }
 }

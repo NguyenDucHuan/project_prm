@@ -15,6 +15,7 @@ import fpt.edu.vn.stickershop.R;
 import fpt.edu.vn.stickershop.models.CartItem;
 import fpt.edu.vn.stickershop.models.InventoryItem;
 import fpt.edu.vn.stickershop.models.LuckyWheel;
+import fpt.edu.vn.stickershop.models.Order;
 import fpt.edu.vn.stickershop.models.OrderDetails;
 import fpt.edu.vn.stickershop.models.OrderItem;
 import fpt.edu.vn.stickershop.models.Product;
@@ -87,6 +88,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_ORDER_STATUS = "status";
     public static final String COLUMN_ORDER_TOTAL = "total";
     public static final String COLUMN_ORDER_ADDRESS = "address";
+    public static final String COLUMN_ORDER_TYPE = "order_type";
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -127,6 +129,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_ORDER_ADDRESS + " TEXT, " +
                 COLUMN_ORDER_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP, " +
                 COLUMN_ORDER_ITEM_COUNT + " INTEGER, " +
+                COLUMN_ORDER_TYPE + " TEXT DEFAULT 'PURCHASE', " + // Thêm cột này
                 "FOREIGN KEY(" + COLUMN_USER_ID_FK + ") REFERENCES " + TABLE_USERS + "(" + COLUMN_USER_ID + ")" +
                 ")";
         db.execSQL(createOrdersTable);
@@ -172,6 +175,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 "FOREIGN KEY(" + COLUMN_INVENTORY_USER_ID + ") REFERENCES " + TABLE_USERS + "(" + COLUMN_USER_ID + "), " +
                 "FOREIGN KEY(" + COLUMN_INVENTORY_PRODUCT_ID + ") REFERENCES " + TABLE_PRODUCTS + "(" + COLUMN_PRODUCT_ID + ")" +
                 ")";
+        
         db.execSQL(createInventoryTable);
 
         insertSampleLuckyWheelData(db);
@@ -285,7 +289,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         wheelValues.put(COLUMN_WHEEL_DESCRIPTION, "Spin to win amazing stickers!");
         long wheelId = db.insert(TABLE_LUCKY_WHEELS, null, wheelValues);
 
+        ContentValues wheelValues2 = new ContentValues();
+        wheelValues.put(COLUMN_WHEEL_NAME, "Super Wheel");
+        wheelValues.put(COLUMN_WHEEL_COST, 10.0);
+        wheelValues.put(COLUMN_WHEEL_DESCRIPTION, "Spin to win amazing stickers!");
+        long wheelId2 = db.insert(TABLE_LUCKY_WHEELS, null, wheelValues);
+
+
         // Insert wheel items with different probabilities
+        insertWheelItem(db, wheelId2, 1, 40.0, 1); // Common item - 40%
+        insertWheelItem(db, wheelId2, 2, 30.0, 1); // Common item - 30%
+        insertWheelItem(db, wheelId2, 3, 20.0, 1); // Uncommon item - 20%
+        insertWheelItem(db, wheelId2, 4, 8.0, 1);  // Rare item - 8%
+        insertWheelItem(db, wheelId2, 5, 2.0, 1);
+
         insertWheelItem(db, wheelId, 1, 40.0, 1); // Common item - 40%
         insertWheelItem(db, wheelId, 2, 30.0, 1); // Common item - 30%
         insertWheelItem(db, wheelId, 3, 20.0, 1); // Uncommon item - 20%
@@ -445,7 +462,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             Log.e("DatabaseHelper", "Error clearing cart", e);
         }
     }
+
     public long saveOrderWithItems(int userId, String address, List<CartItem> cartItems) {
+        return saveOrderWithItems(userId, address, cartItems, "PURCHASE");
+    }
+
+    public long saveOrderWithItems(int userId, String address, List<CartItem> cartItems, String orderType) {
         SQLiteDatabase db = this.getWritableDatabase();
         long orderId = -1;
 
@@ -467,6 +489,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             orderValues.put(COLUMN_ORDER_TOTAL, totalAmount);
             orderValues.put(COLUMN_ORDER_ADDRESS, address);
             orderValues.put(COLUMN_ORDER_ITEM_COUNT, totalItems);
+            orderValues.put(COLUMN_ORDER_TYPE, orderType); // Thêm order type
 
             orderId = db.insert(TABLE_ORDERS, null, orderValues);
 
@@ -496,37 +519,139 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return orderId;
     }
 
-    public OrderDetails getOrderDetails(long orderId) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        OrderDetails orderDetails = null;
+    // Method để save withdrawal order
+    public long saveWithdrawalOrder(int userId, String address, List<InventoryItem> items) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        long orderId = -1;
 
         try {
-            // Get order info
-            String orderQuery = "SELECT * FROM " + TABLE_ORDERS + " WHERE " + COLUMN_ORDER_ID + " = ?";
+            db.beginTransaction();
+
+            // Calculate totals
+            int totalItems = 0;
+            for (InventoryItem item : items) {
+                totalItems += item.getQuantity();
+            }
+
+            // Insert withdrawal order
+            ContentValues orderValues = new ContentValues();
+            orderValues.put(COLUMN_USER_ID_FK, userId);
+            orderValues.put(COLUMN_ORDER_STATUS, "Pending");
+            orderValues.put(COLUMN_ORDER_TOTAL, 0.0); // Withdrawal orders have $0 total
+            orderValues.put(COLUMN_ORDER_ADDRESS, address);
+            orderValues.put(COLUMN_ORDER_ITEM_COUNT, totalItems);
+            orderValues.put(COLUMN_ORDER_TYPE, "WITHDRAWAL"); // Mark as withdrawal
+
+            orderId = db.insert(TABLE_ORDERS, null, orderValues);
+
+            if (orderId != -1) {
+                // Insert order items và remove from inventory
+                for (InventoryItem item : items) {
+                    // Insert order item
+                    ContentValues itemValues = new ContentValues();
+                    itemValues.put(COLUMN_ORDER_ID_FK, orderId);
+                    itemValues.put(COLUMN_ORDER_ITEM_PRODUCT_ID, item.getProductId());
+                    itemValues.put(COLUMN_ORDER_ITEM_QUANTITY, item.getQuantity());
+                    itemValues.put(COLUMN_ORDER_ITEM_PRICE, 0.0); // $0 for withdrawal
+                    itemValues.put(COLUMN_ORDER_ITEM_TOTAL, 0.0);
+
+                    db.insert(TABLE_ORDER_ITEMS, null, itemValues);
+
+                    // Remove from inventory
+                    removeFromInventory(db, userId, item.getProductId(), item.getQuantity());
+                }
+
+                db.setTransactionSuccessful();
+            }
+
+        } catch (Exception e) {
+            android.util.Log.e("DatabaseHelper", "Error saving withdrawal order", e);
+        } finally {
+            db.endTransaction();
+            db.close();
+        }
+
+        return orderId;
+    }
+
+    private void removeFromInventory(SQLiteDatabase db, int userId, int productId, int quantity) {
+        try {
+            // Get current quantity
+            Cursor cursor = db.query(TABLE_USER_INVENTORY,
+                    new String[]{COLUMN_INVENTORY_QUANTITY},
+                    COLUMN_INVENTORY_USER_ID + "=? AND " + COLUMN_INVENTORY_PRODUCT_ID + "=?",
+                    new String[]{String.valueOf(userId), String.valueOf(productId)},
+                    null, null, null);
+
+            if (cursor.moveToFirst()) {
+                int currentQuantity = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_INVENTORY_QUANTITY));
+                int newQuantity = currentQuantity - quantity;
+
+                if (newQuantity <= 0) {
+                    // Remove item completely
+                    db.delete(TABLE_USER_INVENTORY,
+                            COLUMN_INVENTORY_USER_ID + "=? AND " + COLUMN_INVENTORY_PRODUCT_ID + "=?",
+                            new String[]{String.valueOf(userId), String.valueOf(productId)});
+                } else {
+                    // Update quantity
+                    ContentValues updateValues = new ContentValues();
+                    updateValues.put(COLUMN_INVENTORY_QUANTITY, newQuantity);
+                    db.update(TABLE_USER_INVENTORY, updateValues,
+                            COLUMN_INVENTORY_USER_ID + "=? AND " + COLUMN_INVENTORY_PRODUCT_ID + "=?",
+                            new String[]{String.valueOf(userId), String.valueOf(productId)});
+                }
+            }
+            cursor.close();
+
+        } catch (Exception e) {
+            android.util.Log.e("DatabaseHelper", "Error removing from inventory", e);
+        }
+    }
+
+    public OrderDetails getOrderDetails(long orderId) {
+        OrderDetails orderDetails = null;
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        try {
+            android.util.Log.d("DatabaseHelper", "Getting order details for orderId: " + orderId);
+
+            // Query order information với đầy đủ columns
+            String orderQuery = "SELECT " +
+                    COLUMN_ORDER_ID + ", " +
+                    COLUMN_ORDER_STATUS + ", " +
+                    COLUMN_ORDER_TOTAL + ", " +
+                    COLUMN_ORDER_ADDRESS + ", " +
+                    COLUMN_ORDER_TIMESTAMP + ", " +
+                    COLUMN_ORDER_ITEM_COUNT + ", " +
+                    COLUMN_ORDER_TYPE +
+                    " FROM " + TABLE_ORDERS +
+                    " WHERE " + COLUMN_ORDER_ID + " = ?";
+
             Cursor orderCursor = db.rawQuery(orderQuery, new String[]{String.valueOf(orderId)});
 
             if (orderCursor.moveToFirst()) {
-                String status = orderCursor.getString(orderCursor.getColumnIndexOrThrow(COLUMN_ORDER_STATUS));
-                double total = orderCursor.getDouble(orderCursor.getColumnIndexOrThrow(COLUMN_ORDER_TOTAL));
-                String address = orderCursor.getString(orderCursor.getColumnIndexOrThrow(COLUMN_ORDER_ADDRESS));
+                int id = orderCursor.getInt(0);
+                String status = orderCursor.getString(1);
+                double total = orderCursor.getDouble(2);
+                String address = orderCursor.getString(3);
+                String timestamp = orderCursor.getString(4);
+                int itemCount = orderCursor.getInt(5);
+                String orderType = orderCursor.getString(6);
 
-                String timestamp = "N/A";
-                int itemCount = 0;
-                try {
-                    timestamp = orderCursor.getString(orderCursor.getColumnIndexOrThrow(COLUMN_ORDER_TIMESTAMP));
-                } catch (Exception e) {
-                    // Column doesn't exist, use default
-                }
-                try {
-                    itemCount = orderCursor.getInt(orderCursor.getColumnIndexOrThrow(COLUMN_ORDER_ITEM_COUNT));
-                } catch (Exception e) {
-                    // Column doesn't exist, use default
-                }
+                android.util.Log.d("DatabaseHelper", String.format(
+                        "Order found - ID: %d, Status: %s, Total: %.2f, Address: %s, Type: %s",
+                        id, status, total, address, orderType));
 
-                // Mock order items với hình ảnh
-                List<OrderItem> orderItems = getMockOrderItems(orderId);
+                // Tạo Order object với orderType
+                Order order = new Order(id, status, total, address, timestamp, itemCount, orderType);
 
-                orderDetails = new OrderDetails((int)orderId, status, total, address, timestamp, itemCount, orderItems);
+                // Get real order items thay vì mock data
+                List<OrderItem> orderItems = getRealOrderItems(orderId);
+
+                orderDetails = new OrderDetails(id, status, total, address, timestamp, itemCount, orderItems);
+                orderDetails.setOrder(order); // Set order object vào orderDetails
+            } else {
+                android.util.Log.w("DatabaseHelper", "No order found with ID: " + orderId);
             }
 
             orderCursor.close();
@@ -538,6 +663,54 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
 
         return orderDetails;
+    }
+
+    // Method để lấy real order items
+    private List<OrderItem> getRealOrderItems(long orderId) {
+        List<OrderItem> items = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        try {
+            String query = "SELECT " +
+                    "oi." + COLUMN_ORDER_ITEM_PRODUCT_ID + ", " +
+                    "oi." + COLUMN_ORDER_ITEM_QUANTITY + ", " +
+                    "oi." + COLUMN_ORDER_ITEM_PRICE + ", " +
+                    "oi." + COLUMN_ORDER_ITEM_TOTAL + ", " +
+                    "p." + COLUMN_PRODUCT_NAME + ", " +
+                    "p." + COLUMN_PRODUCT_IMAGE +
+                    " FROM " + TABLE_ORDER_ITEMS + " oi " +
+                    " JOIN " + TABLE_PRODUCTS + " p ON oi." + COLUMN_ORDER_ITEM_PRODUCT_ID + " = p." + COLUMN_PRODUCT_ID +
+                    " WHERE oi." + COLUMN_ORDER_ID_FK + " = ?";
+
+            Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(orderId)});
+
+            while (cursor.moveToNext()) {
+                int productId = cursor.getInt(0);
+                int quantity = cursor.getInt(1);
+                double price = cursor.getDouble(2);
+                double total = cursor.getDouble(3);
+                String productName = cursor.getString(4);
+                String productImage = cursor.getString(5);
+
+                OrderItem item = new OrderItem(productId, productName, productImage, quantity, price, total);
+                items.add(item);
+            }
+
+            cursor.close();
+
+            // Nếu không có real items, fallback to mock data
+            if (items.isEmpty()) {
+                android.util.Log.w("DatabaseHelper", "No real order items found, using mock data");
+                items = getMockOrderItems(orderId);
+            }
+
+        } catch (Exception e) {
+            android.util.Log.e("DatabaseHelper", "Error getting real order items", e);
+            // Fallback to mock data nếu có lỗi
+            items = getMockOrderItems(orderId);
+        }
+
+        return items;
     }
 
     private List<OrderItem> getMockOrderItems(long orderId) {
@@ -607,7 +780,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         String query = "SELECT i.*, p." + COLUMN_PRODUCT_NAME + ", p." + COLUMN_PRODUCT_IMAGE +
                 " FROM " + TABLE_USER_INVENTORY + " i " +
                 "JOIN " + TABLE_PRODUCTS + " p ON i." + COLUMN_INVENTORY_PRODUCT_ID + " = p." + COLUMN_PRODUCT_ID +
-                " WHERE i." + COLUMN_INVENTORY_USER_ID + " = ?";
+                " WHERE i." + COLUMN_INVENTORY_USER_ID + " = ?" +
+                " ORDER BY i." + COLUMN_INVENTORY_DATE_OBTAINED + " DESC";
 
         Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(userId)});
 
@@ -654,39 +828,95 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     public boolean addToInventory(int userId, int productId, int quantity) {
-        SQLiteDatabase db = this.getWritableDatabase();
+        android.util.Log.d("DatabaseHelper", "=== ADD TO INVENTORY CALLED ===");
+        android.util.Log.d("DatabaseHelper", String.format("Parameters - UserID: %d, ProductID: %d, Quantity: %d",
+                userId, productId, quantity));
 
-        // Check if item already exists in inventory
-        Cursor cursor = db.query(TABLE_USER_INVENTORY,
-                new String[]{COLUMN_INVENTORY_QUANTITY},
-                COLUMN_INVENTORY_USER_ID + "=? AND " + COLUMN_INVENTORY_PRODUCT_ID + "=?",
-                new String[]{String.valueOf(userId), String.valueOf(productId)},
+        SQLiteDatabase db = this.getWritableDatabase();
+        boolean success = false;
+
+        try {
+            // Kiểm tra xem item đã tồn tại trong inventory chưa
+            android.util.Log.d("DatabaseHelper", "Checking if item exists in inventory...");
+
+            Cursor cursor = db.query(TABLE_USER_INVENTORY,
+                    new String[]{COLUMN_INVENTORY_QUANTITY},
+                    COLUMN_INVENTORY_USER_ID + "=? AND " + COLUMN_INVENTORY_PRODUCT_ID + "=?",
+                    new String[]{String.valueOf(userId), String.valueOf(productId)},
+                    null, null, null);
+
+            if (cursor.moveToFirst()) {
+                android.util.Log.d("DatabaseHelper", "Item exists, updating quantity...");
+                // Item already exists, update quantity
+                int existingQuantity = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_INVENTORY_QUANTITY));
+                int newQuantity = existingQuantity + quantity;
+
+                android.util.Log.d("DatabaseHelper", String.format("Existing quantity: %d, New quantity: %d",
+                        existingQuantity, newQuantity));
+
+                ContentValues updateValues = new ContentValues();
+                updateValues.put(COLUMN_INVENTORY_QUANTITY, newQuantity);
+
+                int rowsUpdated = db.update(TABLE_USER_INVENTORY, updateValues,
+                        COLUMN_INVENTORY_USER_ID + "=? AND " + COLUMN_INVENTORY_PRODUCT_ID + "=?",
+                        new String[]{String.valueOf(userId), String.valueOf(productId)});
+
+                success = rowsUpdated > 0;
+                android.util.Log.d("DatabaseHelper", "Update result - Rows updated: " + rowsUpdated);
+
+            } else {
+                android.util.Log.d("DatabaseHelper", "Item doesn't exist, inserting new record...");
+                // Item doesn't exist, insert new
+                ContentValues values = new ContentValues();
+                values.put(COLUMN_INVENTORY_USER_ID, userId);
+                values.put(COLUMN_INVENTORY_PRODUCT_ID, productId);
+                values.put(COLUMN_INVENTORY_QUANTITY, quantity);
+                values.put(COLUMN_INVENTORY_DATE_OBTAINED, getCurrentDateTime());
+
+                long insertId = db.insert(TABLE_USER_INVENTORY, null, values);
+                success = insertId != -1;
+                android.util.Log.d("DatabaseHelper", "Insert result - Insert ID: " + insertId);
+            }
+
+            cursor.close();
+
+        } catch (Exception e) {
+            android.util.Log.e("DatabaseHelper", "Exception in addToInventory", e);
+            success = false;
+        } finally {
+            db.close();
+        }
+
+        android.util.Log.d("DatabaseHelper", "=== ADD TO INVENTORY COMPLETED - Success: " + success + " ===");
+        return success;
+    }
+    public LuckyWheel getLuckyWheelById(int wheelId) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        LuckyWheel wheel = null;
+
+        Cursor cursor = db.query(TABLE_LUCKY_WHEELS,
+                null,
+                COLUMN_WHEEL_ID + "=?",
+                new String[]{String.valueOf(wheelId)},
                 null, null, null);
 
-        ContentValues values = new ContentValues();
-        boolean success;
-
         if (cursor.moveToFirst()) {
-            // Update existing item
-            int currentQuantity = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_INVENTORY_QUANTITY));
-            values.put(COLUMN_INVENTORY_QUANTITY, currentQuantity + quantity);
+            int id = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_WHEEL_ID));
+            String name = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_WHEEL_NAME));
+            double cost = cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_WHEEL_COST));
+            String description = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_WHEEL_DESCRIPTION));
 
-            int rowsUpdated = db.update(TABLE_USER_INVENTORY, values,
-                    COLUMN_INVENTORY_USER_ID + "=? AND " + COLUMN_INVENTORY_PRODUCT_ID + "=?",
-                    new String[]{String.valueOf(userId), String.valueOf(productId)});
-            success = rowsUpdated > 0;
-        } else {
-            // Insert new item
-            values.put(COLUMN_INVENTORY_USER_ID, userId);
-            values.put(COLUMN_INVENTORY_PRODUCT_ID, productId);
-            values.put(COLUMN_INVENTORY_QUANTITY, quantity);
-
-            long result = db.insert(TABLE_USER_INVENTORY, null, values);
-            success = result != -1;
+            List<WheelItem> items = getWheelItems(id);
+            wheel = new LuckyWheel(id, name, cost, description, items);
         }
 
         cursor.close();
         db.close();
-        return success;
+        return wheel;
     }
+    private String getCurrentDateTime() {
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault());
+        return sdf.format(new java.util.Date());
+    }
+
 }

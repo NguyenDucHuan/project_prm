@@ -42,7 +42,7 @@ dependencies {
     implementation(libs.picasso)
     implementation(libs.json)
     implementation(fileTree(mapOf(
-        "dir" to "D:\\Tuntuntunsahur\\PRM\\ZaloPayLib",
+        "dir" to "E:\\TERM8\\PRM\\ZaloPayLib",
         "include" to listOf("*.aar", "*.jar"),
         "exclude" to listOf("")
     )))
@@ -51,5 +51,4 @@ dependencies {
     androidTestImplementation(libs.espresso.core)
     implementation("com.squareup.okhttp3:okhttp:4.6.0")
     implementation("commons-codec:commons-codec:1.14")
-
 }
